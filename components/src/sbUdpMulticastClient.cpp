@@ -46,7 +46,7 @@ sbUdpMulticastClient::Send(const nsACString& aIpAddress,
   rv = pom->GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
                               NS_GET_IID(sbIUdpMulticastClientCallback),
                               aCallback,
-                              NS_PROXY_SYNC,
+                              NS_PROXY_SYNC | NS_PROXY_ALWAYS,
                               getter_AddRefs(proxiedCallback));
   NS_ENSURE_SUCCESS(rv, rv);
 
@@ -148,5 +148,6 @@ sbUdpMulticastClientWorker::Run()
   }
 
   mCallback->Done(NS_OK);
+  PR_Close(socket);
   return NS_OK;
 }
