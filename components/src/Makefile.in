@@ -47,7 +47,7 @@ EXTENSION_STAGE_DIR = $(SONGBIRD_OBJDIR)/extensions/syrinxtape/.xpistage
 
 SONGBIRD_COMPONENTS = $(srcdir)/sbhttpd.js \
                       $(srcdir)/sbSyrinxTapeService.js \
-                      $(srcdir)/sbUpnpService.js \
+                      $(srcdir)/sbInternetGatewayService.js \
                       $(DYNAMIC_LIB) \
                       $(NULL)
 

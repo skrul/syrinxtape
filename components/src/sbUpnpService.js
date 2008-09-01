@@ -16,10 +16,10 @@ const UPNP_HOST = "239.255.255.250";
 const UPNP_PORT = 1900;
 
 function TRACE(s) {
-  dump("******\n* sbUpnpService: " + s + "\n*******\n");
+  dump("******\n* sbInternetGatewayService: " + s + "\n*******\n");
 }
 
-function sbUpnpService() {
+function sbInternetGatewayService() {
 
   this._started = false;
 
@@ -37,19 +37,18 @@ function sbUpnpService() {
   this._externalIpAddress = null;
 }
 
-sbUpnpService.prototype = {
-  classDescription: "sbUpnpService",
+sbInternetGatewayService.prototype = {
+  classDescription: "sbInternetGatewayService",
   classID:          Components.ID("3775a0ef-cd3d-47c9-8204-230ff83e821f"),
-  contractID:       "@skrul.com/syrinxtape/upnp-service;1",
+  contractID:       "@skrul.com/syrinxtape/internet-gateway-service;1",
   QueryInterface:   XPCOMUtils.generateQI([Ci.nsIObserver,
-                                           Ci.sbIUpnpService]),
+                                           Ci.sbIInternetGatewayService]),
   _xpcom_categories: [{ category: "app-startup" }]
 }
 
-sbUpnpService.prototype._discover =
-function sbUpnpService__discover()
+sbInternetGatewayService.prototype._discover =
+function sbInternetGatewayService__discover()
 {
-/*
   var a = [
     "M-SEARCH * HTTP/1.1",
     "HOST: " + UPNP_HOST + ":" + UPNP_PORT,
@@ -65,11 +64,13 @@ function sbUpnpService__discover()
               .createInstance(Ci.sbIUdpMulticastClient);
 
   var b = STRING_TO_BYTES(s);
+  TRACE("here");
   udp.send(UPNP_HOST, UPNP_PORT, 500, b.length, b, {
     gateway: null,
     receive: function (length, receive) {
       if (!this.gateway) {
         var message = BYTES_TO_STRING(receive);
+  TRACE("here");
         var a = /^LOCATION: (.*)$/m.exec(message);
         if (a) {
           this.gateway = a[1];
@@ -80,32 +81,43 @@ function sbUpnpService__discover()
       TRACE("found gateway " + this.gateway);
     }
   });
-*/
 }
 
-sbUpnpService.prototype._startup =
-function sbUpnpService__startup()
+sbInternetGatewayService.prototype._startup =
+function sbInternetGatewayService__startup()
 {
-  TRACE("sbUpnpService::_startup");
+  TRACE("sbInternetGatewayService::_startup");
 
   if (this._started) {
     return;
   }
-  this._discover();
+
   this._started = true;
 }
 
-sbUpnpService.prototype._shutdown =
-function sbUpnpService__shutdown()
+sbInternetGatewayService.prototype._shutdown =
+function sbInternetGatewayService__shutdown()
 {
-  TRACE("sbUpnpService::_shutdown");
+  TRACE("sbInternetGatewayService::_shutdown");
 
   this._started = false;
 }
 
+// sbIUpnpService
+sbInternetGatewayService.prototype.addExternalIpAddressObserver =
+function sbInternetGatewayService_addExternalIpAddressObserver(aObserver)
+{
+  this._discover();
+}
+
+sbInternetGatewayService.prototype.removeExternalIpAddressObserver =
+function sbInternetGatewayService_removeExternalIpAddressObserver(aObserver)
+{
+}
+
 // nsIObserver
-sbUpnpService.prototype.observe =
-function sbUpnpService_observe(aSubject, aTopic, aData)
+sbInternetGatewayService.prototype.observe =
+function sbInternetGatewayService_observe(aSubject, aTopic, aData)
 {
   if (aTopic == NS_PROFILE_STARTUP_OBSERVER_ID) {
     this._startup();
@@ -120,7 +132,7 @@ function sbUpnpService_observe(aSubject, aTopic, aData)
 }
 
 function NSGetModule(compMgr, fileSpec) {
-  return XPCOMUtils.generateModule([sbUpnpService]);
+  return XPCOMUtils.generateModule([sbInternetGatewayService]);
 }
 
 function STRING_TO_BYTES(s) {
