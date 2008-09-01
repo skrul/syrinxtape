@@ -1,0 +1,32 @@
+# Copyright (C) 2008 by Steve Krulewitz <skrulx@gmail.com>
+# Licensed under GPLv2 or later, see file LICENSE in the xpi for details.
+
+DEPTH     = ../..
+topsrcdir = @top_srcdir@
+srcdir    = @srcdir@
+VPATH     = @srcdir@
+
+include $(DEPTH)/build/autodefs.mk
+
+SUBDIRS = chrome components
+
+EXTENSION_NAME = syrinxtape
+EXTENSION_UUID = $(EXTENSION_NAME)@skrul.com
+EXTENSION_DIR  = .
+EXTENSION_STAGE_DIR = ./.xpistage
+
+XPI_NAME = $(EXTENSION_NAME)
+
+make_xpi: extinstall
+
+extinstall:
+	$(CYGWIN_WRAPPER) $(CP) -rf $(srcdir)/defaults $(EXTENSION_STAGE_DIR)
+	$(CYGWIN_WRAPPER) $(CP) -rf $(srcdir)/data $(EXTENSION_STAGE_DIR)
+
+.PHONY: extinstall
+
+ifdef DEBUG
+INSTALL_EXTENSION = 1
+endif
+
+include $(topsrcdir)/build/rules.mk

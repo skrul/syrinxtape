@@ -1,0 +1,55 @@
+DEPTH = ../../../..
+topsrcdir = @top_srcdir@
+srcdir = @srcdir@
+VPATH = @srcdir@
+
+include $(DEPTH)/build/autodefs.mk
+
+SONGBIRD_COMPONENTS = $(srcdir)/sbhttpd.js \
+                      $(srcdir)/sbSyrinxTapeService.js \
+                      $(srcdir)/sbUpnpService.js \
+                      $(NULL)
+
+target_name = sbUdpMulticastClient
+
+CPP_SRCS = sbSyrinxTapeModule.cpp \
+           sbUdpMulticastClient.cpp \
+           $(NULL)
+
+CPP_INCLUDES = $(DEPTH)/extensions/syrinxtape/components/public \
+               $(MOZSDK_INCLUDE_DIR) \
+               $(MOZSDK_INCLUDE_DIR)/necko \
+               $(MOZSDK_INCLUDE_DIR)/nspr \
+               $(MOZSDK_INCLUDE_DIR)/xpcom \
+               $(MOZSDK_INCLUDE_DIR)/string \
+               $(MOZSDK_IDL_DIR) \
+               $(NULL)
+
+IS_COMPONENT = 1
+
+DYNAMIC_LIB = $(target_name)$(DLL_SUFFIX)
+
+DYNAMIC_LIB_OBJS = $(CPP_SRCS:.cpp=$(OBJ_SUFFIX))
+
+DYNAMIC_LIB_EXTRA_IMPORTS = nspr4 \
+                            xpcom \
+                            xpcomglue_s \
+                            $(NULL)
+
+DYNAMIC_LIB_IMPORT_PATHS = $(MOZSDK_LIB_DIR) \
+                           $(NULL)
+
+ifeq ($(SB_PLATFORM), windows)
+  DYNAMIC_LIB_EXTRA_IMPORTS += unicharutil_external_s \
+                               $(NULL)
+endif
+
+ifeq ($(SB_PLATFORM), macosx)
+  DYNAMIC_LIB_EXTRA_IMPORTS += mozjs
+endif
+
+EXTENSION_STAGE_DIR = $(SONGBIRD_OBJDIR)/extensions/syrinxtape/.xpistage
+
+SONGBIRD_COMPONENTS = $(DYNAMIC_LIB)
+
+include $(topsrcdir)/build/rules.mk

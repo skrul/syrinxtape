@@ -1,0 +1,12 @@
+/*
+ * Copyright (C) 2008 by Steve Krulewitz <skrulx@gmail.com>
+ * Licensed under GPLv2 or later, see file LICENSE in the xpi for details.
+ */
+
+#include "nsISupports.idl"
+
+[scriptable, uuid(3250414e-e740-4219-a131-21a9d7208e22)]
+interface sbIUpnpService : nsISupports
+{
+
+};
