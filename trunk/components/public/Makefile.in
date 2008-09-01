@@ -9,7 +9,7 @@ VPATH = @srcdir@
 include $(DEPTH)/build/autodefs.mk
 
 XPIDL_SRCS = sbIHttpServer.idl \
-             sbIUpnpService.idl \
+             sbIInternetGatewayService.idl \
              sbIUdpMulticastClient.idl \
              $(NULL)
 

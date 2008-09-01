@@ -6,10 +6,13 @@ Components.utils.import("resource://app/jsmodules/sbProperties.jsm");
 
 function runTest () {
 
-  var udp = Cc["@skrul.com/syrinxtape/upnp-service;1"]
-              .getService(Ci.sbIUpnpService);
+  var tm = Cc["@mozilla.org/thread-manager;1"].getService(Ci.nsIThreadManager);
+  var mainThread = tm.mainThread;
 
-  udp.addExternalIpAddressObserver({
+  var upnp = Cc["@skrul.com/syrinxtape/internet-gateway-service;1"]
+               .getService(Ci.sbIUpnpService);
+
+  upnp.addExternalIpAddressObserver({
     observe: function (subject, topic, data) {
       log("observe: " + [subject, topic, data].join(","));
     }
