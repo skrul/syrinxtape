@@ -1,0 +1,5 @@
+#define SB_UDPMULTICASTCLIENT_CID \
+  { 0xa416e84a, 0x8b3f, 0x418e, \
+  { 0x89, 0x1c, 0x86, 0x34, 0x2c, 0x66, 0x46, 0x21 } }
+#define SB_UDPMULTICASTCLIENT_CONTRACTID \
+  "@skrul.com/syrinxtape/udp-multicast-client;1"

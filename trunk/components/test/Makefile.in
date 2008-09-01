@@ -1,0 +1,21 @@
+# Copyright (C) 2008 by Steve Krulewitz <skrulx@gmail.com>
+# Licensed under GPLv2 or later, see file LICENSE in the xpi for details.
+
+DEPTH = ../../../..
+topsrcdir = @top_srcdir@
+srcdir = @srcdir@
+VPATH = @srcdir@
+
+include $(DEPTH)/build/autodefs.mk
+
+ifdef DEBUG
+
+SONGBIRD_TEST_COMPONENT = syrinxtape
+
+SONGBIRD_TESTS = $(srcdir)/test_syrinxtape.js \
+                 $(srcdir)/test_udp.js \
+                 $(NULL)
+
+endif
+
+include $(topsrcdir)/build/rules.mk

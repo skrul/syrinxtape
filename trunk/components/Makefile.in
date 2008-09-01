@@ -1,0 +1,20 @@
+# Copyright (C) 2008 by Steve Krulewitz <skrulx@gmail.com>
+# Licensed under GPLv2 or later, see file LICENSE in the xpi for details.
+
+DEPTH = ../../..
+topsrcdir = @top_srcdir@
+srcdir = @srcdir@
+VPATH = @srcdir@
+
+include $(DEPTH)/build/autodefs.mk
+
+SUBDIRS = public \
+          src \
+          test \
+          $(NULL)
+
+SUBDIRDEPS  = src : public
+SUBDIRDEPS2  = test : src
+
+include $(topsrcdir)/build/rules.mk
+

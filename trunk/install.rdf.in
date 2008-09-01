@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+
+#filter substitution
+<RDF xmlns="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:em="http://www.mozilla.org/2004/em-rdf#">
+
+  <Description about="urn:mozilla:install-manifest">
+
+    <!-- Songbird -->
+    <em:targetApplication>
+      <Description>
+        <em:id>songbird@songbirdnest.com</em:id>
+        <em:minVersion>0.7</em:minVersion>
+        <em:maxVersion>0.8</em:maxVersion>
+      </Description>
+    </em:targetApplication>
+
+    <em:id>@EXTENSION_UUID@</em:id>
+    <em:name>SyrinxTape</em:name>
+    <em:description>SyrinxTape for Songbird</em:description>
+    <em:creator>Steve Krulewitz</em:creator>
+    <em:homepageURL>http://www.songbirdnest.com/</em:homepageURL>
+    <em:version>0.0.1</em:version>
+
+  </Description>
+
+</RDF>
+

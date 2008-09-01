@@ -1,0 +1,7 @@
+syrinxtape.jar:
+% content syrinxtape %content/
+% locale syrinxtape en-US %locales/en-US/
+% skin syrinxtape classic/1.0 %skin/
+% overlay windowtype:Songbird:Main chrome://syrinxtape/content/overlay.xul
+@include_all_to
+
