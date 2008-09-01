@@ -14,6 +14,7 @@
 #include <nsXPCOMCIDInternal.h>
 
 #define UDP_TIMEOUT 400000
+#define READ_BUFFER 4096
 
 NS_IMPL_ISUPPORTS1(sbUdpMulticastClient, sbIUdpMulticastClient)
 
@@ -134,10 +135,10 @@ sbUdpMulticastClientWorker::Run()
   }
 
   while (PR_TRUE) {
-    char buff[4096];
-    bzero(&buff, 4096);
+    char buff[READ_BUFFER];
+    bzero(&buff, READ_BUFFER);
 
-    PRInt32 read = PR_Recv(socket, &buff, 4096, 0, mTimeout);
+    PRInt32 read = PR_Recv(socket, &buff, READ_BUFFER, 0, mTimeout);
     if (read > 0) {
       mCallback->Receive(read, (PRUint8*) &buff);
     }

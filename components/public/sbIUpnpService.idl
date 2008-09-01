@@ -4,9 +4,11 @@
  */
 
 #include "nsISupports.idl"
+#include "nsIObserver.idl"
 
 [scriptable, uuid(3250414e-e740-4219-a131-21a9d7208e22)]
 interface sbIUpnpService : nsISupports
 {
-
+  void addExternalIpAddressObserver(in nsIObserver aObserver);
+  void removeExternalIpAddressObserver(in nsIObserver aObserver);
 };
