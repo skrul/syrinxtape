@@ -2,33 +2,45 @@
  * Copyright (C) 2008 by Steve Krulewitz <skrulx@gmail.com>
  * Licensed under GPLv2 or later, see file LICENSE in the xpi for details.
  */
-
 #include "nsISupports.idl"
-#include "nsIObserver.idl"
 
 [scriptable, uuid(44d20ff9-c84f-47f8-87a0-187a26503444)]
-interface sbIStatusListener : nsISupports
+interface sbIInternetGatewayServiceStatusListener : nsISupports
 {
-  void onError(in AString aMessage);
+  void onStatusChange(in unsigned long aStatus);
+  void onError(in unsigned long aError, in AString aMessage);
   void onNewExternalIpAddress(in AString aIpAddress);
+  void onDebugMessage(in AString aMessage);
 };
 
 [scriptable, uuid(26042e79-54e6-488c-844c-9e1672d5c296)]
 interface sbIPortMappingListener : nsISupports
 {
-  void onAdded(in unsigned short aLocal, in unsigned short aRemote);
+  void onAdded(in AString aIpAddress,
+               in unsigned short aLocal,
+               in unsigned short aExternal);
   void onRemoved(in unsigned short aLocal);
-  void onError(in unsigned short aLocal, in unsigned short aRemote);
+  void onError(in unsigned short aLocal,
+               in unsigned short aExternal,
+               in AString aMessage);
 };
 
 [scriptable, uuid(3250414e-e740-4219-a131-21a9d7208e22)]
 interface sbIInternetGatewayService : nsISupports
 {
-  void addStatusListener(in sbIStatusListener aListener);
-  void removeStatusListener(in sbIStatusListener aListener);
+  const unsigned long STATUS_STOPPED = 0;
+  const unsigned long STATUS_REFRESHING = 1;
+  const unsigned long STATUS_READY = 2;
+
+  const unsigned long ERROR_NETWORK = 0;
+  const unsigned long ERROR_NO_GATEWAY_FOUND = 1;
+  const unsigned long ERROR_OTHER = 2;
+
+  void addStatusListener(in sbIInternetGatewayServiceStatusListener aListener);
+  void removeStatusListener(in sbIInternetGatewayServiceStatusListener aListener);
 
   void addPortMapping(in unsigned short aLocal,
-                      in unsigned short aRemote,
+                      in unsigned short aExternal,
                       in sbIPortMappingListener aListener);
   void removePortMapping(in unsigned short aLocal);
 };

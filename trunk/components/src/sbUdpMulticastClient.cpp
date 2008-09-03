@@ -138,7 +138,13 @@ sbUdpMulticastClientWorker::Run()
     char buff[READ_BUFFER];
     bzero(&buff, READ_BUFFER);
 
-    PRInt32 read = PR_Recv(socket, &buff, READ_BUFFER, 0, mTimeout);
+    PRInt32 read = PR_RecvFrom(socket,
+                               &buff,
+                               READ_BUFFER,
+                               0,
+                               &readAddr,
+                               mTimeout);
+
     if (read > 0) {
       mCallback->Receive(read, (PRUint8*) &buff);
     }
