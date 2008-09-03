@@ -6,8 +6,8 @@ Components.utils.import("resource://app/jsmodules/sbProperties.jsm");
 
 function runTest () {
 
-  var udp = Cc["@skrul.com/syrinxtape/udp-multicast-client;1"]
-              .getService(Ci.sbIUdpMulticastClient);
+  var nu = Cc["@skrul.com/syrinxtape/net-utils;1"]
+             .getService(Ci.stINetUtils);
 
   var tm = Cc["@mozilla.org/thread-manager;1"].getService(Ci.nsIThreadManager);
   var mainThread = tm.mainThread;
@@ -15,7 +15,8 @@ function runTest () {
   var a = [
     "M-SEARCH * HTTP/1.1",
     "HOST: 239.255.255.250:1900",
-    "ST: urn:schemas-upnp-org:device:InternetGatewayDevice:1",
+//    "ST: urn:schemas-upnp-org:device:InternetGatewayDevice:1",
+    "ST: ssdp:all",
     "MAN: \"ssdp:discover\"",
     "MX: 3",
     ""
@@ -30,7 +31,7 @@ function runTest () {
 
   log("sending udp...");
 
-  udp.send("239.255.255.250", "1900", 500, b.length, b, {
+  nu.sendUdpMulticast("239.255.255.250", "1900", 2000, b.length, b, {
     receive: function (length, rec) {
       log("length " + length + " rec.length " + rec.length);
       var s = "";

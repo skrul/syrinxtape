@@ -12,17 +12,17 @@
 #include <nsCOMPtr.h>
 #include <nsTArray.h>
 
-class sbUdpMulticastClient : public sbIUdpMulticastClient
+class stNetUtils : public stINetUtils
 {
 public:
   NS_DECL_ISUPPORTS
-  NS_DECL_SBIUDPMULTICASTCLIENT
+  NS_DECL_STINETUTILS
 
-  sbUdpMulticastClient();
-  ~sbUdpMulticastClient();
+  stNetUtils();
+  ~stNetUtils();
 };
 
-class sbUdpMulticastClientWorker : public nsIRunnable
+class stUdpMulticastWorker : public nsIRunnable
 {
 public:
   NS_DECL_ISUPPORTS
@@ -33,14 +33,14 @@ public:
                 PRUint64 aTimeout,
                 PRUint32 aSendLength,
                 PRUint8* aSendBytes,
-                sbIUdpMulticastClientCallback* aCallback);
+                stIUdpMulticastCallback* aCallback);
 
 private:
   nsCString mIpAddress;
   PRUint16 mPort;
   PRUint64 mTimeout;
   nsTArray<PRUint8> mSendBytes;
-  nsCOMPtr<sbIUdpMulticastClientCallback> mCallback;
+  nsCOMPtr<stIUdpMulticastCallback> mCallback;
 };
 
 #endif /* __SBUDPMULTICASTCLIENT__ */

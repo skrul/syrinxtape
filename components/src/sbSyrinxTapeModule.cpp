@@ -7,16 +7,16 @@
 #include "sbUdpMulticastClient.h"
 #include "sbSyrinxTapeCID.h"
 
-NS_GENERIC_FACTORY_CONSTRUCTOR(sbUdpMulticastClient)
+NS_GENERIC_FACTORY_CONSTRUCTOR(stNetUtils)
 
 static const nsModuleComponentInfo components[] =
 {
   {
     "Udp Multicast Client",
-    SB_UDPMULTICASTCLIENT_CID,
-    SB_UDPMULTICASTCLIENT_CONTRACTID,
-    sbUdpMulticastClientConstructor
+    ST_NETUTILS_CID,
+    ST_NETUTILS_CONTRACTID,
+    stNetUtilsConstructor
   }
 };
 
-NS_IMPL_NSGETMODULE(SongbirdUdpMulticastClientModule, components)
+NS_IMPL_NSGETMODULE(SyrinxTapeModule, components)

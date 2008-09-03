@@ -5,7 +5,7 @@
 #include "nsISupports.idl"
 
 [scriptable, uuid(832d93ab-fe57-4a34-9c9a-55372a6b076e)]
-interface sbIUdpMulticastClientCallback : nsISupports
+interface stIUdpMulticastCallback : nsISupports
 {
   void receive(in unsigned long aRecieveLength,
                [array, size_is(aRecieveLength)] in PRUint8 aRecieveBytes);
@@ -13,12 +13,12 @@ interface sbIUdpMulticastClientCallback : nsISupports
 };
 
 [scriptable, uuid(bea3a6ea-ee1c-4412-8d07-05459a4aed32)]
-interface sbIUdpMulticastClient : nsISupports
+interface stINetUtils : nsISupports
 {
-  void send(in ACString aIpAddres,
-            in unsigned short aPort,
-            in unsigned long long aTimeout,
-            in unsigned long aSendLength,
-            [array, size_is(aSendLength)] in PRUint8 aSendBytes,
-            in sbIUdpMulticastClientCallback aCallback);
+  void sendUdpMulticast(in ACString aIpAddres,
+                        in unsigned short aPort,
+                        in unsigned long long aTimeout,
+                        in unsigned long aSendLength,
+                        [array, size_is(aSendLength)] in PRUint8 aSendBytes,
+                        in stIUdpMulticastCallback aCallback);
 };

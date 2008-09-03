@@ -16,23 +16,23 @@
 #define UDP_TIMEOUT 400000
 #define READ_BUFFER 4096
 
-NS_IMPL_ISUPPORTS1(sbUdpMulticastClient, sbIUdpMulticastClient)
+NS_IMPL_ISUPPORTS1(stNetUtils, stINetUtils)
 
-sbUdpMulticastClient::sbUdpMulticastClient()
+stNetUtils::stNetUtils()
 {
 }
 
-sbUdpMulticastClient::~sbUdpMulticastClient()
+stNetUtils::~stNetUtils()
 {
 }
 
 NS_IMETHODIMP
-sbUdpMulticastClient::Send(const nsACString& aIpAddress,
-                           PRUint16 aPort,
-                           PRUint64 aTimeout,
-                           PRUint32 aSendLength,
-                           PRUint8* aSendBytes,
-                           sbIUdpMulticastClientCallback* aCallback)
+stNetUtils::SendUdpMulticast(const nsACString& aIpAddress,
+                             PRUint16 aPort,
+                             PRUint64 aTimeout,
+                             PRUint32 aSendLength,
+                             PRUint8* aSendBytes,
+                             stIUdpMulticastCallback* aCallback)
 {
   NS_ENSURE_ARG_POINTER(aSendBytes);
   NS_ENSURE_ARG_POINTER(aCallback);
@@ -42,16 +42,16 @@ sbUdpMulticastClient::Send(const nsACString& aIpAddress,
     do_GetService(NS_XPCOMPROXY_CONTRACTID, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  nsCOMPtr<sbIUdpMulticastClientCallback> proxiedCallback;
+  nsCOMPtr<stIUdpMulticastCallback> proxiedCallback;
   rv = pom->GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
-                              NS_GET_IID(sbIUdpMulticastClientCallback),
+                              NS_GET_IID(stIUdpMulticastCallback),
                               aCallback,
                               NS_PROXY_SYNC | NS_PROXY_ALWAYS,
                               getter_AddRefs(proxiedCallback));
   NS_ENSURE_SUCCESS(rv, rv);
 
-  nsRefPtr<sbUdpMulticastClientWorker> worker =
-    new sbUdpMulticastClientWorker();
+  nsRefPtr<stUdpMulticastWorker> worker =
+    new stUdpMulticastWorker();
   NS_ENSURE_TRUE(worker, NS_ERROR_OUT_OF_MEMORY);
 
   rv = worker->Init(aIpAddress,
@@ -66,15 +66,15 @@ sbUdpMulticastClient::Send(const nsACString& aIpAddress,
   return NS_NewThread(getter_AddRefs(thread), worker);
 }
 
-NS_IMPL_THREADSAFE_ISUPPORTS1(sbUdpMulticastClientWorker, nsIRunnable)
+NS_IMPL_THREADSAFE_ISUPPORTS1(stUdpMulticastWorker, nsIRunnable)
 
 nsresult
-sbUdpMulticastClientWorker::Init(const nsACString& aIpAddress,
-                                 PRUint16 aPort,
-                                 PRUint64 aTimeout,
-                                 PRUint32 aSendLength,
-                                 PRUint8* aSendBytes,
-                                 sbIUdpMulticastClientCallback* aCallback)
+stUdpMulticastWorker::Init(const nsACString& aIpAddress,
+                           PRUint16 aPort,
+                           PRUint64 aTimeout,
+                           PRUint32 aSendLength,
+                           PRUint8* aSendBytes,
+                           stIUdpMulticastCallback* aCallback)
 {
   NS_ASSERTION(aSendBytes, "aSendBytes is null");
   NS_ASSERTION(aCallback, "aCallback is null");
@@ -91,7 +91,7 @@ sbUdpMulticastClientWorker::Init(const nsACString& aIpAddress,
 }
 
 NS_IMETHODIMP
-sbUdpMulticastClientWorker::Run()
+stUdpMulticastWorker::Run()
 {
   PRNetAddr addr;
   PRStatus result = PR_StringToNetAddr(mIpAddress.BeginReading(), &addr);
@@ -133,6 +133,13 @@ sbUdpMulticastClientWorker::Run()
     PR_Close(socket);
     return NS_OK;
   }
+
+
+    //PRNetAddr myAddr;
+  PR_GetSockName(socket, &readAddr);
+  char s[1024];
+  PR_NetAddrToString(&readAddr, &s[0], 1024);
+  printf("#################### %s\n", s);
 
   while (PR_TRUE) {
     char buff[READ_BUFFER];

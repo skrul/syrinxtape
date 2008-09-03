@@ -27,27 +27,12 @@ const nsenvelope = new Namespace("http://schemas.xmlsoap.org/soap/envelope/");
 const nswanip = new Namespace("urn:schemas-upnp-org:service:WANIPConnection:1");
 
 function TRACE(s) {
-  dump("******\n* sbInternetGatewayService: " + s + "\n*******\n");
+  dump("******\n* stInternetGatewayService: " + s + "\n*******\n");
 }
 
-function sbInternetGatewayService() {
-
-  var info = Cc["@mozilla.org/system-info;1"].getService(Ci.nsIPropertyBag);
-  TRACE(info.getProperty("host"));
-  var dns = Cc["@mozilla.org/network/dns-service;1"].getService(Ci.nsIDNSService);
-//  var record = dns.resolve(info.getProperty("host"), 0);
-  var record = dns.resolve("localhost", 0);
-  TRACE(record.getNextAddrAsString());
+function stInternetGatewayClient() {
 
   this._started = false;
-
-  this._ios = Cc["@mozilla.org/network/io-service;1"]
-                .getService(Ci.nsIIOService);
-
-  var obs = Cc["@mozilla.org/observer-service;1"]
-              .getService(Ci.nsIObserverService);
-  obs.addObserver(this, NS_PROFILE_STARTUP_OBSERVER_ID, false);
-  obs.addObserver(this, NS_PROFILE_SHUTDOWN_OBSERVER_ID, false);
 
   this._statusListeners = [];
   this._refreshing = false;
@@ -61,29 +46,28 @@ function sbInternetGatewayService() {
   this._externalIpAddress = null;
 }
 
-sbInternetGatewayService.prototype = {
-  classDescription: "sbInternetGatewayService",
+stInternetGatewayClient.prototype = {
+  classDescription: "stInternetGatewayClient",
   classID:          Components.ID("3775a0ef-cd3d-47c9-8204-230ff83e821f"),
-  contractID:       "@skrul.com/syrinxtape/internet-gateway-service;1",
+  contractID:       "@skrul.com/syrinxtape/internet-gateway-client;1",
   QueryInterface:   XPCOMUtils.generateQI([Ci.nsIObserver,
-                                           Ci.sbIInternetGatewayService]),
-  _xpcom_categories: [{ category: "app-startup" }]
+                                           Ci.stIInternetGatewayClient]),
 }
 
-sbInternetGatewayService.prototype._refresh =
-function sbInternetGatewayService__refresh()
+stInternetGatewayClient.prototype._refresh =
+function stInternetGatewayClient__refresh()
 {
   if (this._refreshing) {
     return;
   }
 
   this._refreshing = true;
-  this._statusChange(sbIInternetGatewayService.STATUS_REFRESHING);
+  this._statusChange(stIInternetGatewayClient.STATUS_REFRESHING);
   this._discover();
 }
 
-sbInternetGatewayService.prototype._discover =
-function sbInternetGatewayService__discover()
+stInternetGatewayClient.prototype._discover =
+function stInternetGatewayClient__discover()
 {
   this._debugMessage("Starting discover...");
 
@@ -99,11 +83,11 @@ function sbInternetGatewayService__discover()
     ];
     var b = STRING_TO_BYTES(a.join("\r\n"));
 
-    var udp = Cc["@skrul.com/syrinxtape/udp-multicast-client;1"]
-                .createInstance(Ci.sbIUdpMulticastClient);
+    var udp = Cc["@skrul.com/syrinxtape/net-utils;1"]
+                .createInstance(Ci.stINetUtils);
 
     var that = this;
-    udp.send(UPNP_HOST, UPNP_PORT, 500, b.length, b, {
+    udp.sendUdpMulticast(UPNP_HOST, UPNP_PORT, 500, b.length, b, {
       gateway: null,
       receive: function (length, receive) {
         try {
@@ -128,7 +112,7 @@ function sbInternetGatewayService__discover()
           }
           else {
             that._refreshError(null,
-                               Ci.sbIInternetGatewayService.ERROR_NO_GATEWAY_FOUND,
+                               Ci.stIInternetGatewayClient.ERROR_NO_GATEWAY_FOUND,
                                "No Internet Gatway Device found");
           }
         }
@@ -143,8 +127,8 @@ function sbInternetGatewayService__discover()
   }
 }
 
-sbInternetGatewayService.prototype._updateDevice =
-function sbInternetGatewayService__updateDevice()
+stInternetGatewayClient.prototype._updateDevice =
+function stInternetGatewayClient__updateDevice()
 {
   this._debugMessage("Updating gateway device");
 
@@ -162,7 +146,7 @@ function sbInternetGatewayService__updateDevice()
 
         if (!service) {
           this._refreshError(null,
-                             Ci.sbIInternetGatewayService.ERROR_NO_GATEWAY_FOUND,
+                             Ci.stIInternetGatewayClient.ERROR_NO_GATEWAY_FOUND,
                              "No Internet Gatway Device found (no service)");
           return;
         }
@@ -178,12 +162,12 @@ function sbInternetGatewayService__updateDevice()
         }
 
         this._updateExternalIpAddress();
+        return;
       }
-      else {
-          this._refreshError(null,
-                             Ci.sbIInternetGatewayService.ERROR_NETWORK,
-                             "Bad XML from gateway");
-      }
+
+      this._refreshError(null,
+                         Ci.stIInternetGatewayClient.ERROR_NETWORK,
+                         "Bad XML from gateway");
     });
   }
   catch (e) {
@@ -191,8 +175,8 @@ function sbInternetGatewayService__updateDevice()
   }
 }
 
-sbInternetGatewayService.prototype._updateExternalIpAddress =
-function sbInternetGatewayService__updateExternalIpAddress()
+stInternetGatewayClient.prototype._updateExternalIpAddress =
+function stInternetGatewayClient__updateExternalIpAddress()
 {
   this._debugMessage("Updating external ip address");
 
@@ -210,12 +194,12 @@ function sbInternetGatewayService__updateExternalIpAddress()
         if (xml) {
           this._externalIpAddress = xml..NewExternalIPAddress.text();
           this._debugMessage("externalIpAddress = " + this._externalIpAddress);
+          return;
         }
-        else {
-          this._refreshError(null,
-                             Ci.sbIInternetGatewayService.ERROR_NETWORK,
-                             "Bad XML from gateway");
-        }
+
+        this._refreshError(null,
+                           Ci.stIInternetGatewayClient.ERROR_NETWORK,
+                           "Bad XML from gateway");
       }
       catch (e) {
         this._refreshError(e);
@@ -227,8 +211,8 @@ function sbInternetGatewayService__updateExternalIpAddress()
   }
 }
 
-sbInternetGatewayService.prototype._send =
-function sbInternetGatewayService__send(aUrl, aMethod, aHeaders, aBody, aCallback)
+stInternetGatewayClient.prototype._send =
+function stInternetGatewayClient__send(aUrl, aMethod, aHeaders, aBody, aCallback)
 {
   this._debugMessage("send: \n" + [aUrl, aMethod, aHeaders, aBody].join("\n"));
 
@@ -264,8 +248,8 @@ function sbInternetGatewayService__send(aUrl, aMethod, aHeaders, aBody, aCallbac
   xhr.send(aBody);
 }
 
-sbInternetGatewayService.prototype._sendSoap =
-function sbInternetGatewayService__sendSoap(aPath, aAction, aXmlBody, aCallback)
+stInternetGatewayClient.prototype._sendSoap =
+function stInternetGatewayClient__sendSoap(aPath, aAction, aXmlBody, aCallback)
 {
   var headers = {
     SOAPAction: aAction
@@ -275,41 +259,21 @@ function sbInternetGatewayService__sendSoap(aPath, aAction, aXmlBody, aCallback)
 
 }
 
-sbInternetGatewayService.prototype._startup =
-function sbInternetGatewayService__startup()
-{
-  TRACE("sbInternetGatewayService::_startup");
-
-  if (this._started) {
-    return;
-  }
-
-  this._started = true;
-}
-
-sbInternetGatewayService.prototype._shutdown =
-function sbInternetGatewayService__shutdown()
-{
-  TRACE("sbInternetGatewayService::_shutdown");
-
-  this._started = false;
-}
-
-sbInternetGatewayService.prototype._refreshError =
-function sbInternetGatewayService__refreshError(aException, aError, aMessage)
+stInternetGatewayClient.prototype._refreshError =
+function stInternetGatewayClient__refreshError(aException, aError, aMessage)
 {
   this._refreshing = false;
   if (aException) {
-    aError = Ci.sbIInternetGatewayService.ERROR_OTHER;
+    aError = Ci.stIInternetGatewayClient.ERROR_OTHER;
     aMessage = aException;
   }
 
   this._error(aError, aMessage);
-  this._statusChange(Ci.sbIInternetGatewayService.STATUS_STOPPED);
+  this._statusChange(Ci.stIInternetGatewayClient.STATUS_STOPPED);
 }
 
-sbInternetGatewayService.prototype._notifyStatus =
-function sbInternetGatewayService__notifyStatus(aFunc)
+stInternetGatewayClient.prototype._notifyStatus =
+function stInternetGatewayClient__notifyStatus(aFunc)
 {
   this._statusListeners.forEach(function(l) {
     try {
@@ -321,8 +285,8 @@ function sbInternetGatewayService__notifyStatus(aFunc)
   });
 }
 
-sbInternetGatewayService.prototype._debugMessage =
-function sbInternetGatewayService__debugMessage(aMessage)
+stInternetGatewayClient.prototype._debugMessage =
+function stInternetGatewayClient__debugMessage(aMessage)
 {
   if (DEBUG) {
     this._notifyStatus(function(l) {
@@ -331,8 +295,8 @@ function sbInternetGatewayService__debugMessage(aMessage)
   }
 }
 
-sbInternetGatewayService.prototype._statusChange =
-function sbInternetGatewayService__statusChange(aStatus)
+stInternetGatewayClient.prototype._statusChange =
+function stInternetGatewayClient__statusChange(aStatus)
 {
   if (this._status != aStatus) {
     this._status = aStatus;
@@ -342,60 +306,59 @@ function sbInternetGatewayService__statusChange(aStatus)
   }
 }
 
-sbInternetGatewayService.prototype._error =
-function sbInternetGatewayService__error(aError, aMessage)
+stInternetGatewayClient.prototype._error =
+function stInternetGatewayClient__error(aError, aMessage)
 {
   this._notifyStatus(function(l) {
     l.onError(aError, aMessage);
   });
 }
 
-// sbIInternetGatewayService
-sbInternetGatewayService.prototype.addStatusListener =
-function sbInternetGatewayService_addStatusListenerr(aListener)
+// stIInternetGatewayClientnternetGatewayClient
+stInternetGatewayClient.prototype.start =
+function stInternetGatewayClient_start()
+{
+  if (this._started) {
+    return;
+  }
+
+  this._started = true;
+  this._discover();
+}
+
+stInternetGatewayClient.prototype.stop =
+function stInternetGatewayClient_stop()
+{
+}
+
+stInternetGatewayClient.prototype.addStatusListener =
+function stInternetGatewayClient_addStatusListenerr(aListener)
 {
   if (this._statusListeners.indexOf(aListener) < 0) {
     this._statusListeners.push(aListener);
   }
-  this._discover();
 }
 
-sbInternetGatewayService.prototype.removeStatusListener =
-function sbInternetGatewayService_removeStatusListener(aListener)
+stInternetGatewayClient.prototype.removeStatusListener =
+function stInternetGatewayClient_removeStatusListener(aListener)
 {
   this._statusListeners.filter(function(e) {
     return aListener != e;
   });
 }
 
-sbInternetGatewayService.prototype.addPortMapping =
-function sbInternetGatewayService_addPortMapping(aLocal, aExternal, aListener)
+stInternetGatewayClient.prototype.addPortMapping =
+function stInternetGatewayClient_addPortMapping(aLocal, aExternal, aListener)
 {
 }
 
-sbInternetGatewayService.prototype.removePortMapping =
-function sbInternetGatewayService_removePortMapping(aLocal)
+stInternetGatewayClient.prototype.removePortMapping =
+function stInternetGatewayClient_removePortMapping(aLocal)
 {
-}
-
-// nsIObserver
-sbInternetGatewayService.prototype.observe =
-function sbInternetGatewayService_observe(aSubject, aTopic, aData)
-{
-  if (aTopic == NS_PROFILE_STARTUP_OBSERVER_ID) {
-    this._startup();
-  }
-  else if (aTopic == NS_PROFILE_SHUTDOWN_OBSERVER_ID) {
-    this._shutdown();
-    var obs = Cc["@mozilla.org/observer-service;1"]
-                .getService(Ci.nsIObserverService);
-    obs.removeObserver(this, NS_PROFILE_STARTUP_OBSERVER_ID);
-    obs.removeObserver(this, NS_PROFILE_SHUTDOWN_OBSERVER_ID);
-  }
 }
 
 function NSGetModule(compMgr, fileSpec) {
-  return XPCOMUtils.generateModule([sbInternetGatewayService]);
+  return XPCOMUtils.generateModule([stInternetGatewayClient]);
 }
 
 function STRING_TO_BYTES(s) {

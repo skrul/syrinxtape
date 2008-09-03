@@ -12,10 +12,10 @@ const Cr = Components.results;
 const SB_LIBRARY_MANAGER_READY_TOPIC = "songbird-library-manager-ready";
 const SB_LIBRARY_MANAGER_BEFORE_SHUTDOWN_TOPIC = "songbird-library-manager-before-shutdown";
 
-const OT_NS = "http://skrul.com/syrinxtape/1.0#";
+const ST_NS = "http://skrul.com/syrinxtape/1.0#";
 const SB_NS = "http://songbirdnest.com/data/1.0#";
 
-const PROP_IS_PUBLISHED = OT_NS + "isPublished";
+const PROP_IS_PUBLISHED = ST_NS + "isPublished";
 
 const RE_EXTENSION = /.*\.(.*)$/;
 const RE_PLAYLIST_HTML = /^\/(.*)$/;
@@ -30,10 +30,10 @@ const CONTENT_TYPES = {
 }
 
 function TRACE(s) {
-  dump("sbSyrinxTapeService: " + s + "\n");
+  dump("stSyrinxTapeService: " + s + "\n");
 }
 
-function OT_GetDataDir() {
+function ST_GetDataDir() {
   var em = Cc["@mozilla.org/extensions/manager;1"]
              .getService(Ci.nsIExtensionManager);
   var installLocation = em.getInstallLocation("syrinxtape@skrul.com");
@@ -44,7 +44,7 @@ function OT_GetDataDir() {
   return file;
 }
 
-function sbSyrinxTapeService() {
+function stSyrinxTapeService() {
 
   this._started = false;
   this._lm = Cc["@songbirdnest.com/Songbird/library/Manager;1"]
@@ -64,17 +64,17 @@ function sbSyrinxTapeService() {
   obs.addObserver(this, SB_LIBRARY_MANAGER_BEFORE_SHUTDOWN_TOPIC, false);
 }
 
-sbSyrinxTapeService.prototype = {
-  classDescription: "sbSyrinxTapeService",
+stSyrinxTapeService.prototype = {
+  classDescription: "stSyrinxTapeService",
   classID:          Components.ID("8e3ba203-147a-4f2f-9966-eadbef107fae"),
   contractID:       "@skrul.com/syrinxtape/service;1",
   QueryInterface:   XPCOMUtils.generateQI([Ci.nsIObserver,
-                                           Ci.sbIHttpRequestHandler]),
+                                           Ci.stIHttpRequestHandler]),
   _xpcom_categories: [{ category: "app-startup" }]
 }
 
-sbSyrinxTapeService.prototype._getResourceUrl =
-function sbSyrinxTapeService__getResourceUrl(aFilename)
+stSyrinxTapeService.prototype._getResourceUrl =
+function stSyrinxTapeService__getResourceUrl(aFilename)
 {
   var file = this._dataDir.clone();
   file.append("resources");
@@ -85,8 +85,8 @@ function sbSyrinxTapeService__getResourceUrl(aFilename)
   return null;
 }
 
-sbSyrinxTapeService.prototype._getTemplateUrl =
-function sbSyrinxTapeService__getTemplateUrl(aFilename)
+stSyrinxTapeService.prototype._getTemplateUrl =
+function stSyrinxTapeService__getTemplateUrl(aFilename)
 {
   var file = this._dataDir.clone();
   file.append("templates");
@@ -97,8 +97,8 @@ function sbSyrinxTapeService__getTemplateUrl(aFilename)
   throw Cr.NS_ERROR_NOT_AVAILABLE;
 }
 
-sbSyrinxTapeService.prototype._getMediaListByPath =
-function sbSyrinxTapeService__getMediaListByPath(aPath)
+stSyrinxTapeService.prototype._getMediaListByPath =
+function stSyrinxTapeService__getMediaListByPath(aPath)
 {
   var listener = {
     item: null,
@@ -121,13 +121,13 @@ function sbSyrinxTapeService__getMediaListByPath(aPath)
   var l = this._lm.mainLibrary;
   l.enumerateItemsByProperties(pa,
                                listener,
-                               Ci.sbIMediaList.ENUMERATIONTYPE_SNAPSHOT);
+                               Ci.stIMediaList.ENUMERATIONTYPE_SNAPSHOT);
 
   return listener.item;
 }
 
-sbSyrinxTapeService.prototype._writeMediaList =
-function sbSyrinxTapeService__writeMediaList(aRequest, aResponse, aMediaList)
+stSyrinxTapeService.prototype._writeMediaList =
+function stSyrinxTapeService__writeMediaList(aRequest, aResponse, aMediaList)
 {
   var path = "/" + encodeURIComponent(aMediaList.name);
 
@@ -209,37 +209,37 @@ function sbSyrinxTapeService__writeMediaList(aRequest, aResponse, aMediaList)
   return true;
 }
 
-sbSyrinxTapeService.prototype._writeTrack =
-function sbSyrinxTapeService__writeTrack(aRequest, aResponse, aItem)
+stSyrinxTapeService.prototype._writeTrack =
+function stSyrinxTapeService__writeTrack(aRequest, aResponse, aItem)
 {
   this._writeResponseFromURI(aRequest, aResponse, aItem.contentSrc);
   return true;
 }
 
-sbSyrinxTapeService.prototype._startup =
-function sbSyrinxTapeService__startup()
+stSyrinxTapeService.prototype._startup =
+function stSyrinxTapeService__startup()
 {
-  TRACE("sbSyrinxTapeService::_startup\n");
+  TRACE("stSyrinxTapeService::_startup\n");
   return;
 
   if (this._started) {
     return;
   }
 
-  this._dataDir = OT_GetDataDir();
+  this._dataDir = ST_GetDataDir();
   this._pm = Cc["@songbirdnest.com/Songbird/Properties/PropertyManager;1"]
-               .getService(Ci.sbIPropertyManager);
+               .getService(Ci.stIPropertyManager);
 
   this._server = Cc["@skrul.com/syrinxtape/jshttp;1"]
-                   .createInstance(Ci.sbIHttpServer);
+                   .createInstance(Ci.stIHttpServer);
   this._server.registerPathHandler("/", this);
   this._server.start(5079);
 
   this._started = true;
 }
 
-sbSyrinxTapeService.prototype._shutdown =
-function sbSyrinxTapeService__shutdown()
+stSyrinxTapeService.prototype._shutdown =
+function stSyrinxTapeService__shutdown()
 {
   var obs = Cc["@mozilla.org/observer-service;1"]
               .getService(Ci.nsIObserverService);
@@ -253,8 +253,8 @@ function sbSyrinxTapeService__shutdown()
   this._started = false;
 }
 
-sbSyrinxTapeService.prototype._formatPropertyValue =
-function sbSyrinxTapeService__formatPropertyValue(aId, aValue)
+stSyrinxTapeService.prototype._formatPropertyValue =
+function stSyrinxTapeService__formatPropertyValue(aId, aValue)
 {
   var info = this._pm.getPropertyInfo(aId);
   // Need to wrap this because of bug #12127
@@ -266,8 +266,8 @@ function sbSyrinxTapeService__formatPropertyValue(aId, aValue)
   }
 }
 
-sbSyrinxTapeService.prototype._writeResponseFromURI =
-function sbSyrinxTapeService__writeResponseFromURI(aRequest, aResponse, aURI)
+stSyrinxTapeService.prototype._writeResponseFromURI =
+function stSyrinxTapeService__writeResponseFromURI(aRequest, aResponse, aURI)
 {
   var ios = Cc["@mozilla.org/network/io-service;1"]
               .getService(Ci.nsIIOService);
@@ -287,8 +287,8 @@ function sbSyrinxTapeService__writeResponseFromURI(aRequest, aResponse, aURI)
   is.close();
 }
 
-sbSyrinxTapeService.prototype._writeXmlResponse =
-function sbSyrinxTapeService__writeXmlResponse(aRequest,
+stSyrinxTapeService.prototype._writeXmlResponse =
+function stSyrinxTapeService__writeXmlResponse(aRequest,
                                              aResponse,
                                              aDocument,
                                              aStylesheet,
@@ -320,8 +320,8 @@ function sbSyrinxTapeService__writeXmlResponse(aRequest,
   encoder.encodeToStream(aResponse.bodyOutputStream);
 }
 
-sbSyrinxTapeService.prototype._htmlEscape =
-function sbSyrinxTapeService__htmlEscape(s)
+stSyrinxTapeService.prototype._htmlEscape =
+function stSyrinxTapeService__htmlEscape(s)
 {
   var ret = null;
   if (s) {
@@ -333,8 +333,8 @@ function sbSyrinxTapeService__htmlEscape(s)
   return ret;
 }
 
-sbSyrinxTapeService.prototype._newDocument =
-function sbSyrinxTapeService__newDocument(aRoot)
+stSyrinxTapeService.prototype._newDocument =
+function stSyrinxTapeService__newDocument(aRoot)
 {
   var parser = Cc["@mozilla.org/xmlextras/domparser;1"]
                  .createInstance(Ci.nsIDOMParser);
@@ -346,8 +346,8 @@ function sbSyrinxTapeService__newDocument(aRoot)
   return doc;
 }
 
-sbSyrinxTapeService.prototype._appendElement =
-function sbSyrinxTapeService__appendElement(aNode, aNamespace, aName, aData)
+stSyrinxTapeService.prototype._appendElement =
+function stSyrinxTapeService__appendElement(aNode, aNamespace, aName, aData)
 {
   var document = aNode.ownerDocument;
   var e;
@@ -373,8 +373,8 @@ function sbSyrinxTapeService__appendElement(aNode, aNamespace, aName, aData)
   return e;
 }
 
-sbSyrinxTapeService.prototype._loadDocument =
-function sbSyrinxTapeService__loadDocument(aUrl)
+stSyrinxTapeService.prototype._loadDocument =
+function stSyrinxTapeService__loadDocument(aUrl)
 {
   var xhr = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
               .createInstance(Ci.nsIXMLHttpRequest);
@@ -383,8 +383,8 @@ function sbSyrinxTapeService__loadDocument(aUrl)
   return xhr.responseXML;
 }
 
-sbSyrinxTapeService.prototype._write404 =
-function sbSyrinxTapeService__write404(aRequest, aResponse, aMessage)
+stSyrinxTapeService.prototype._write404 =
+function stSyrinxTapeService__write404(aRequest, aResponse, aMessage)
 {
   aResponse.setStatusLine(aRequest.httpVersion, 404, "Not Found");
   aResponse.setHeader("Content-Type", "text/html", false);
@@ -392,9 +392,9 @@ function sbSyrinxTapeService__write404(aRequest, aResponse, aMessage)
   aResponse.write(s);
 }
 
-// sbIHttpRequestHandler
-sbSyrinxTapeService.prototype.handle =
-function sbSyrinxTapeService_handle(aRequest, aResponse)
+// stIHttpRequestHandler
+stSyrinxTapeService.prototype.handle =
+function stSyrinxTapeService_handle(aRequest, aResponse)
 {
   TRACE("handle " + aRequest.path);
 
@@ -449,8 +449,8 @@ function sbSyrinxTapeService_handle(aRequest, aResponse)
 }
 
 // nsIObserver
-sbSyrinxTapeService.prototype.observe =
-function sbSyrinxTapeService_observe(aSubject, aTopic, aData)
+stSyrinxTapeService.prototype.observe =
+function stSyrinxTapeService_observe(aSubject, aTopic, aData)
 {
   if (aTopic == SB_LIBRARY_MANAGER_READY_TOPIC) {
     this._startup();
@@ -461,6 +461,6 @@ function sbSyrinxTapeService_observe(aSubject, aTopic, aData)
 }
 
 function NSGetModule(compMgr, fileSpec) {
-  return XPCOMUtils.generateModule([sbSyrinxTapeService]);
+  return XPCOMUtils.generateModule([stSyrinxTapeService]);
 }
 
