@@ -395,7 +395,7 @@ nsHttpServer.prototype =
    *   the socket being closed
    * @param status : nsresult
    *   the reason the socket stopped listening (NS_BINDING_ABORTED if the server
-   *   was stopped using sbIHttpServer.stop)
+   *   was stopped using stIHttpServer.stop)
    * @see nsIServerSocketListener.onStopListening
    */
   onStopListening: function(socket, status)
@@ -407,7 +407,7 @@ nsHttpServer.prototype =
   // NSIHTTPSERVER
 
   //
-  // see sbIHttpServer.start
+  // see stIHttpServer.start
   //
   start: function(port)
   {
@@ -427,7 +427,7 @@ nsHttpServer.prototype =
   },
 
   //
-  // see sbIHttpServer.stop
+  // see stIHttpServer.stop
   //
   stop: function()
   {
@@ -446,7 +446,7 @@ nsHttpServer.prototype =
   },
 
   //
-  // see sbIHttpServer.registerFile
+  // see stIHttpServer.registerFile
   //
   registerFile: function(path, file)
   {
@@ -457,7 +457,7 @@ nsHttpServer.prototype =
   },
 
   //
-  // see sbIHttpServer.registerDirectory
+  // see stIHttpServer.registerDirectory
   //
   registerDirectory: function(path, directory)
   {
@@ -475,7 +475,7 @@ nsHttpServer.prototype =
   },
 
   //
-  // see sbIHttpServer.registerPathHandler
+  // see stIHttpServer.registerPathHandler
   //
   registerPathHandler: function(path, handler)
   {
@@ -483,7 +483,7 @@ nsHttpServer.prototype =
   },
 
   //
-  // see sbIHttpServer.registerErrorHandler
+  // see stIHttpServer.registerErrorHandler
   //
   registerErrorHandler: function(code, handler)
   {
@@ -491,7 +491,7 @@ nsHttpServer.prototype =
   },
 
   //
-  // see sbIHttpServer.setIndexHandler
+  // see stIHttpServer.setIndexHandler
   //
   setIndexHandler: function(handler)
   {
@@ -499,7 +499,7 @@ nsHttpServer.prototype =
   },
 
   //
-  // see sbIHttpServer.registerContentType
+  // see stIHttpServer.registerContentType
   //
   registerContentType: function(ext, type)
   {
@@ -513,7 +513,7 @@ nsHttpServer.prototype =
   //
   QueryInterface: function(iid)
   {
-    if (iid.equals(Ci.sbIHttpServer) ||
+    if (iid.equals(Ci.stIHttpServer) ||
         iid.equals(Ci.nsIServerSocketListener) ||
         iid.equals(Ci.nsISupports))
       return this;
@@ -1255,7 +1255,7 @@ LineData.prototype =
 
 
 /**
- * Creates a request-handling function for an sbIHttpRequestHandler object.
+ * Creates a request-handling function for an stIHttpRequestHandler object.
  */
 function createHandlerFunc(handler)
 {
@@ -1622,7 +1622,7 @@ ServerHandler.prototype =
   },
 
   //
-  // see sbIHttpServer.registerFile
+  // see stIHttpServer.registerFile
   //
   registerFile: function(path, file)
   {
@@ -1649,7 +1649,7 @@ ServerHandler.prototype =
   },
 
   //
-  // see sbIHttpServer.registerPathHandler
+  // see stIHttpServer.registerPathHandler
   //
   registerPathHandler: function(path, handler)
   {
@@ -1661,7 +1661,7 @@ ServerHandler.prototype =
   },
 
   //
-  // see sbIHttpServer.registerDirectory
+  // see stIHttpServer.registerDirectory
   //
   registerDirectory: function(path, directory)
   {
@@ -1691,7 +1691,7 @@ ServerHandler.prototype =
   },
 
   //
-  // see sbIHttpServer.registerErrorHandler
+  // see stIHttpServer.registerErrorHandler
   //
   registerErrorHandler: function(err, handler)
   {
@@ -1703,7 +1703,7 @@ ServerHandler.prototype =
   },
 
   //
-  // see sbIHttpServer.setIndexHandler
+  // see stIHttpServer.setIndexHandler
   //
   setIndexHandler: function(handler)
   {
@@ -1716,7 +1716,7 @@ ServerHandler.prototype =
   },
 
   //
-  // see sbIHttpServer.registerContentType
+  // see stIHttpServer.registerContentType
   //
   registerContentType: function(ext, type)
   {
@@ -1745,7 +1745,7 @@ ServerHandler.prototype =
    * Sets or remove (if handler is null) a handler in an object with a key.
    *
    * @param handler
-   *   a handler, either function or an sbIHttpRequestHandler
+   *   a handler, either function or an stIHttpRequestHandler
    * @param dict
    *   The object to attach the handler to.
    * @param key
@@ -2534,7 +2534,7 @@ Response.prototype =
   // PUBLIC CONSTRUCTION API
 
   //
-  // see sbIHttpResponse.bodyOutputStream
+  // see stIHttpResponse.bodyOutputStream
   //
   get bodyOutputStream()
   {
@@ -2552,7 +2552,7 @@ Response.prototype =
   },
 
   //
-  // see sbIHttpResponse.write
+  // see stIHttpResponse.write
   //
   write: function(data)
   {
@@ -2561,7 +2561,7 @@ Response.prototype =
   },
 
   //
-  // see sbIHttpResponse.setStatusLine
+  // see stIHttpResponse.setStatusLine
   //
   setStatusLine: function(httpVersion, code, description)
   {
@@ -2604,7 +2604,7 @@ Response.prototype =
   },
 
   //
-  // see sbIHttpResponse.setHeader
+  // see stIHttpResponse.setHeader
   //
   setHeader: function(name, value, merge)
   {
@@ -3116,7 +3116,7 @@ function Request(port)
 
   /**
    * For the addition of ad-hoc properties and new functionality without having
-   * to change sbIHttpRequestMetadata every time; currently lazily created,
+   * to change stIHttpRequestMetadata every time; currently lazily created,
    * as its only use is in directory listings.
    */
   this._bag = null;
@@ -3126,7 +3126,7 @@ Request.prototype =
   // SERVER METADATA
 
   //
-  // see sbIHttpRequestMetadata.host
+  // see stIHttpRequestMetadata.host
   //
   get host()
   {
@@ -3134,7 +3134,7 @@ Request.prototype =
   },
 
   //
-  // see sbIHttpRequestMetadata.port
+  // see stIHttpRequestMetadata.port
   //
   get port()
   {
@@ -3144,7 +3144,7 @@ Request.prototype =
   // REQUEST LINE
 
   //
-  // see sbIHttpRequestMetadata.method
+  // see stIHttpRequestMetadata.method
   //
   get method()
   {
@@ -3152,7 +3152,7 @@ Request.prototype =
   },
 
   //
-  // see sbIHttpRequestMetadata.httpVersion
+  // see stIHttpRequestMetadata.httpVersion
   //
   get httpVersion()
   {
@@ -3160,7 +3160,7 @@ Request.prototype =
   },
 
   //
-  // see sbIHttpRequestMetadata.path
+  // see stIHttpRequestMetadata.path
   //
   get path()
   {
@@ -3168,7 +3168,7 @@ Request.prototype =
   },
 
   //
-  // see sbIHttpRequestMetadata.queryString
+  // see stIHttpRequestMetadata.queryString
   //
   get queryString()
   {
@@ -3178,7 +3178,7 @@ Request.prototype =
   // HEADERS
 
   //
-  // see sbIHttpRequestMetadata.getHeader
+  // see stIHttpRequestMetadata.getHeader
   //
   getHeader: function(name)
   {
@@ -3186,7 +3186,7 @@ Request.prototype =
   },
 
   //
-  // see sbIHttpRequestMetadata.hasHeader
+  // see stIHttpRequestMetadata.hasHeader
   //
   hasHeader: function(name)
   {
@@ -3194,7 +3194,7 @@ Request.prototype =
   },
 
   //
-  // see sbIHttpRequestMetadata.headers
+  // see stIHttpRequestMetadata.headers
   //
   get headers()
   {

@@ -5,7 +5,7 @@
 #include "nsISupports.idl"
 
 [scriptable, uuid(44d20ff9-c84f-47f8-87a0-187a26503444)]
-interface sbIInternetGatewayServiceStatusListener : nsISupports
+interface stIInternetGatewayServiceStatusListener : nsISupports
 {
   void onStatusChange(in unsigned long aStatus);
   void onError(in unsigned long aError, in AString aMessage);
@@ -14,7 +14,7 @@ interface sbIInternetGatewayServiceStatusListener : nsISupports
 };
 
 [scriptable, uuid(26042e79-54e6-488c-844c-9e1672d5c296)]
-interface sbIPortMappingListener : nsISupports
+interface stIPortMappingListener : nsISupports
 {
   void onAdded(in AString aIpAddress,
                in unsigned short aLocal,
@@ -26,7 +26,7 @@ interface sbIPortMappingListener : nsISupports
 };
 
 [scriptable, uuid(3250414e-e740-4219-a131-21a9d7208e22)]
-interface sbIInternetGatewayService : nsISupports
+interface stIInternetGatewayClient : nsISupports
 {
   const unsigned long STATUS_STOPPED = 0;
   const unsigned long STATUS_REFRESHING = 1;
@@ -36,11 +36,14 @@ interface sbIInternetGatewayService : nsISupports
   const unsigned long ERROR_NO_GATEWAY_FOUND = 1;
   const unsigned long ERROR_OTHER = 2;
 
-  void addStatusListener(in sbIInternetGatewayServiceStatusListener aListener);
-  void removeStatusListener(in sbIInternetGatewayServiceStatusListener aListener);
+  void start();
+  void stop();
+
+  void addStatusListener(in stIInternetGatewayServiceStatusListener aListener);
+  void removeStatusListener(in stIInternetGatewayServiceStatusListener aListener);
 
   void addPortMapping(in unsigned short aLocal,
                       in unsigned short aExternal,
-                      in sbIPortMappingListener aListener);
+                      in stIPortMappingListener aListener);
   void removePortMapping(in unsigned short aLocal);
 };

@@ -10,7 +10,7 @@ const PROP_PATH = "http://skrul.com/syrinxtape/1.0#path"
 function runTest () {
 
   var lm = Cc["@songbirdnest.com/Songbird/library/Manager;1"]
-             .getService(Ci.sbILibraryManager);
+             .getService(Ci.stILibraryManager);
 
   var listener = {
     onEnumerationBegin: function () {},
@@ -29,10 +29,10 @@ function runTest () {
 
   lm.mainLibrary.enumerateItemsByProperties(pa,
                                             listener,
-                                            Ci.sbIMediaList.ENUMERATIONTYPE_SNAPSHOT);
+                                            Ci.stIMediaList.ENUMERATIONTYPE_SNAPSHOT);
 
 
-  var s = Cc["@skrul.com/syrinxtape/upnp-service;1"].getService(Ci.sbIUpnpService);
+  var s = Cc["@skrul.com/syrinxtape/upnp-service;1"].getService(Ci.stIUpnpService);
 
   var tm = Cc["@mozilla.org/thread-manager;1"].getService(Ci.nsIThreadManager);
   var mainThread = tm.mainThread;

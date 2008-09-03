@@ -43,16 +43,16 @@ interface nsILocalFile;
 interface nsISimpleEnumerator;
 interface nsIOutputStream;
 
-interface sbIHttpServer;
-interface sbIHttpRequestHandler;
-interface sbIHttpRequestMetadata;
-interface sbIHttpResponse;
+interface stIHttpServer;
+interface stIHttpRequestHandler;
+interface stIHttpRequestMetadata;
+interface stIHttpResponse;
 
 /**
  * An interface which represents an HTTP server.
  */
 [scriptable, uuid(34014bbc-2f9e-4b00-8735-45ead216ee88)]
-interface sbIHttpServer : nsIServerSocketListener
+interface stIHttpServer : nsIServerSocketListener
 {
   /**
    * Starts up this server, listening upon the given port.  This method may
@@ -108,7 +108,7 @@ interface sbIHttpServer : nsIServerSocketListener
    * @throws NS_ERROR_INVALID_ARG
    *   if path does not begin with a "/"
    */
-  void registerPathHandler(in string path, in sbIHttpRequestHandler handler);
+  void registerPathHandler(in string path, in stIHttpRequestHandler handler);
 
   /**
    * Registers a custom error page handler.
@@ -127,7 +127,7 @@ interface sbIHttpServer : nsIServerSocketListener
    * @note
    *   If the error handler handles HTTP 500 and throws, behavior is undefined.
    */
-  void registerErrorHandler(in unsigned long code, in sbIHttpRequestHandler handler);
+  void registerErrorHandler(in unsigned long code, in stIHttpRequestHandler handler);
 
   /**
    * Maps all requests to paths beneath path to the corresponding file beneath
@@ -182,7 +182,7 @@ interface sbIHttpServer : nsIServerSocketListener
    *   directory is available from the metadata object passed to the
    *   handler, under the key "directory".
    */
-  void setIndexHandler(in sbIHttpRequestHandler handler);
+  void setIndexHandler(in stIHttpRequestHandler handler);
 };
 
 /**
@@ -193,17 +193,17 @@ interface sbIHttpServer : nsIServerSocketListener
  * @note
  *   This interface uses the [function] attribute, so you can pass a
  *   script-defined function with the functionality of handle() to any
- *   method which has a sbIHttpRequestHandler parameter, instead of wrapping
+ *   method which has a stIHttpRequestHandler parameter, instead of wrapping
  *   it in an otherwise empty object.
  */
 [scriptable, function, uuid(0e0d5c87-7074-4b46-8c02-fda2023b1777)]
-interface sbIHttpRequestHandler : nsISupports
+interface stIHttpRequestHandler : nsISupports
 {
   /**
    * Processes the HTTP request represented by metadata and initializes the
    * passed-in response to reflect the correct HTTP response.
    *
-   * Note that in some uses of sbIHttpRequestHandler, this method is required to
+   * Note that in some uses of stIHttpRequestHandler, this method is required to
    * not throw an exception; in the general case, however, this method may throw
    * an exception (causing an HTTP 500 response to occur).
    *
@@ -213,7 +213,7 @@ interface sbIHttpRequestHandler : nsISupports
    *   an initially-empty response which must be modified to reflect the data
    *   which should be sent as the response to the request described by metadata
    */
-  void handle(in sbIHttpRequestMetadata metadata, in sbIHttpResponse response);
+  void handle(in stIHttpRequestMetadata metadata, in stIHttpResponse response);
 };
 
 
@@ -221,7 +221,7 @@ interface sbIHttpRequestHandler : nsISupports
  * A representation of the data included in an HTTP request.
  */
 [scriptable, uuid(3f91db96-e26f-4b33-9857-34401551dbe5)]
-interface sbIHttpRequestMetadata : nsIPropertyBag
+interface stIHttpRequestMetadata : nsIPropertyBag
 {
   /**
    * The request type for this request (see RFC 2616, section 5.1.1).
@@ -307,7 +307,7 @@ interface sbIHttpRequestMetadata : nsIPropertyBag
  * Represents an HTTP response, as described in RFC 2616, section 6.
  */
 [scriptable, uuid(d6d553b4-5ecc-407f-97c5-37a73ccf9bc3)]
-interface sbIHttpResponse : nsISupports
+interface stIHttpResponse : nsISupports
 {
   /**
    * Sets the status line for this.  If this method is never called on this, the

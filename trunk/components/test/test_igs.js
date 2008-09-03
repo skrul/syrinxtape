@@ -10,8 +10,8 @@ function runTest () {
   var tm = Cc["@mozilla.org/thread-manager;1"].getService(Ci.nsIThreadManager);
   var mainThread = tm.mainThread;
 
-  var igs = Cc["@skrul.com/syrinxtape/internet-gateway-service;1"]
-               .getService(Ci.sbIInternetGatewayService);
+  var igs = Cc["@skrul.com/syrinxtape/internet-gateway-client;1"]
+               .createInstance(Ci.stIInternetGatewayClient);
   igs.addStatusListener({
     onStatusChange: function (aStatus) {
       log("onStausChange " + aStatus);
@@ -27,6 +27,8 @@ function runTest () {
     }
 
   });
+
+  igs.start();
 
   while (true) {
     mainThread.processNextEvent(true);
