@@ -2,10 +2,10 @@
  * Copyright (C) 2008 by Steve Krulewitz <skrulx@gmail.com>
  * Licensed under GPLv2 or later, see file LICENSE in the xpi for details.
  */
-#ifndef __SBUDPMULTICASTCLIENT__
-#define __SBUDPMULTICASTCLIENT__
+#ifndef __STNETUTILS__
+#define __STNETUTILS__
 
-#include <sbIUdpMulticastClient.h>
+#include <stINetUtils.h>
 
 #include <nsIRunnable.h>
 #include <nsStringGlue.h>
@@ -43,4 +43,4 @@ private:
   nsCOMPtr<stIUdpMulticastCallback> mCallback;
 };
 
-#endif /* __SBUDPMULTICASTCLIENT__ */
+#endif /* __STNETUTILS__ */

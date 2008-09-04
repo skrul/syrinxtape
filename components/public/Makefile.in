@@ -8,9 +8,9 @@ VPATH = @srcdir@
 
 include $(DEPTH)/build/autodefs.mk
 
-XPIDL_SRCS = sbIHttpServer.idl \
-             sbIInternetGatewayService.idl \
-             sbIUdpMulticastClient.idl \
+XPIDL_SRCS = stIHttpServer.idl \
+             stIInternetGatewayClient.idl \
+             stINetUtils.idl \
              $(NULL)
 
 XPIDL_MODULE = sbHttpServer.xpt

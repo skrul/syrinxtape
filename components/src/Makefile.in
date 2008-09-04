@@ -5,10 +5,10 @@ VPATH = @srcdir@
 
 include $(DEPTH)/build/autodefs.mk
 
-target_name = sbUdpMulticastClient
+target_name = stSyrinxTape
 
-CPP_SRCS = sbSyrinxTapeModule.cpp \
-           sbUdpMulticastClient.cpp \
+CPP_SRCS = stSyrinxTapeModule.cpp \
+           stNetUtils.cpp \
            $(NULL)
 
 CPP_INCLUDES = $(DEPTH)/extensions/syrinxtape/components/public \
@@ -45,9 +45,9 @@ endif
 
 EXTENSION_STAGE_DIR = $(SONGBIRD_OBJDIR)/extensions/syrinxtape/.xpistage
 
-SONGBIRD_COMPONENTS = $(srcdir)/sbhttpd.js \
-                      $(srcdir)/sbSyrinxTapeService.js \
-                      $(srcdir)/sbInternetGatewayService.js \
+SONGBIRD_COMPONENTS = $(srcdir)/sthttpd.js \
+                      $(srcdir)/stSyrinxTapeService.js \
+                      $(srcdir)/stInternetGatewayClient.js \
                       $(DYNAMIC_LIB) \
                       $(NULL)
 

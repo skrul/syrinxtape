@@ -2,10 +2,9 @@
  * Copyright (C) 2008 by Steve Krulewitz <skrulx@gmail.com>
  * Licensed under GPLv2 or later, see file LICENSE in the xpi for details.
  */
-
 #include "nsIGenericFactory.h"
-#include "sbUdpMulticastClient.h"
-#include "sbSyrinxTapeCID.h"
+#include "stNetUtils.h"
+#include "stSyrinxTapeCID.h"
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(stNetUtils)
 
