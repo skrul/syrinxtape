@@ -11,6 +11,8 @@
 #include <nsStringGlue.h>
 #include <nsCOMPtr.h>
 #include <nsTArray.h>
+#include <nsISocketTransport.h>
+#include <nsIEventTarget.h>
 
 class stNetUtils : public stINetUtils
 {
@@ -20,6 +22,23 @@ public:
 
   stNetUtils();
   ~stNetUtils();
+
+private:
+  nsCOMPtr<nsISocketTransport> mSocketTransport;
+  nsCOMPtr<nsITransportEventSink> mSink;
+};
+
+class stEventSink : public nsITransportEventSink
+{
+public:
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSITRANSPORTEVENTSINK
+
+  stEventSink(nsISocketTransport* aSocketTransport);
+  ~stEventSink();
+
+private:
+  nsCOMPtr<nsISocketTransport> mSocketTransport;
 };
 
 class stUdpMulticastWorker : public nsIRunnable
