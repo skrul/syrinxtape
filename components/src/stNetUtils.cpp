@@ -12,6 +12,10 @@
 #include <nsIProxyObjectManager.h>
 #include <nsServiceManagerUtils.h>
 #include <nsXPCOMCIDInternal.h>
+#include <nsISocketTransportService.h>
+#include <nsNetCID.h>
+#include <nsIOutputStream.h>
+#include <nsIInputStream.h>
 
 #define UDP_TIMEOUT 400000
 #define READ_BUFFER 4096
@@ -24,6 +28,8 @@ stNetUtils::stNetUtils()
 
 stNetUtils::~stNetUtils()
 {
+  printf("-------> stNetUtils dtor\n");
+
 }
 
 NS_IMETHODIMP
@@ -64,6 +70,98 @@ stNetUtils::SendUdpMulticast(const nsACString& aIpAddress,
 
   nsCOMPtr<nsIThread> thread;
   return NS_NewThread(getter_AddRefs(thread), worker);
+}
+
+NS_IMETHODIMP
+stNetUtils::GetLocalIpAddress(const nsACString& aRemoteIpAddress,
+                              PRUint16 aRemotePort,
+                              stILocalIpAddressCallback* aCallback)
+{
+  NS_ENSURE_ARG_POINTER(aCallback);
+  nsresult rv;
+
+  nsCOMPtr<nsISocketTransportService> sts =
+    do_GetService(NS_SOCKETTRANSPORTSERVICE_CONTRACTID);
+  NS_ENSURE_TRUE(sts, NS_ERROR_OUT_OF_MEMORY);
+
+  nsCOMPtr<nsISocketTransport> st;
+  rv = sts->CreateTransport(nsnull,
+                            0,
+                            aRemoteIpAddress,
+                            aRemotePort,
+                            nsnull,
+                            getter_AddRefs(st));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  rv = st->SetTimeout(nsISocketTransport::TIMEOUT_CONNECT, 30);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  rv = st->SetTimeout(nsISocketTransport::TIMEOUT_READ_WRITE, 30);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  mSocketTransport = st;
+  /*
+  mSink = new stEventSink(st);
+  NS_ENSURE_TRUE(mSink, NS_ERROR_OUT_OF_MEMORY);
+
+  //mSink = es;
+
+  nsCOMPtr<nsIThread> mainThread;
+  rv = NS_GetMainThread(getter_AddRefs(mainThread));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  printf("----------> here\n");
+
+  rv = st->SetEventSink(mSink, mainThread);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsIOutputStream> os;
+  rv = st->OpenOutputStream(0, 0, 0, getter_AddRefs(os));
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  PRUint32 n;
+  rv = os->Write("GET /\r\n", 7, &n);
+
+  printf("----------> here\n");
+  */
+  return NS_OK;
+}
+
+NS_IMPL_THREADSAFE_ISUPPORTS1(stEventSink, nsITransportEventSink)
+
+stEventSink::stEventSink(nsISocketTransport* aSocketTransport) :
+  mSocketTransport(aSocketTransport)
+{
+  NS_ASSERTION(aSocketTransport, "aSocketTransport is null!");
+}
+
+stEventSink::~stEventSink()
+{
+  printf("-----------> stEventSink dtor\n");
+}
+
+NS_IMETHODIMP
+stEventSink::OnTransportStatus(nsITransport* aTransport,
+                               nsresult aStatus,
+                               PRUint64 aProgeess,
+                               PRUint64 aProgressMax)
+{
+  NS_ENSURE_ARG_POINTER(aTransport);
+
+  printf("----------> aStatus 0x%.8x\n", aStatus);
+
+  PRBool isAlive;
+  mSocketTransport->IsAlive(&isAlive);
+  printf("----------> isAlive %d\n", isAlive);
+
+  PRNetAddr addr;
+  nsresult rv = mSocketTransport->GetSelfAddr(&addr);
+  if (NS_SUCCEEDED(rv)) {
+    char s[1024];
+    PR_NetAddrToString(&addr, &s[0], 1024);
+    printf("#################### %s\n", s);
+  }
+
 }
 
 NS_IMPL_THREADSAFE_ISUPPORTS1(stUdpMulticastWorker, nsIRunnable)
@@ -134,12 +232,6 @@ stUdpMulticastWorker::Run()
     return NS_OK;
   }
 
-
-    //PRNetAddr myAddr;
-  PR_GetSockName(socket, &readAddr);
-  char s[1024];
-  PR_NetAddrToString(&readAddr, &s[0], 1024);
-  printf("#################### %s\n", s);
 
   while (PR_TRUE) {
     char buff[READ_BUFFER];
