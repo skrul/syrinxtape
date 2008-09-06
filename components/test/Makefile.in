@@ -15,6 +15,7 @@ SONGBIRD_TEST_COMPONENT = syrinxtape
 SONGBIRD_TESTS = $(srcdir)/test_syrinxtape.js \
                  $(srcdir)/test_udp.js \
                  $(srcdir)/test_igc.js \
+                 $(srcdir)/test_getip.js \
                  $(NULL)
 
 endif

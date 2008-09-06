@@ -11,8 +11,6 @@
 #include <nsStringGlue.h>
 #include <nsCOMPtr.h>
 #include <nsTArray.h>
-#include <nsISocketTransport.h>
-#include <nsIEventTarget.h>
 
 class stNetUtils : public stINetUtils
 {
@@ -22,23 +20,6 @@ public:
 
   stNetUtils();
   ~stNetUtils();
-
-private:
-  nsCOMPtr<nsISocketTransport> mSocketTransport;
-  nsCOMPtr<nsITransportEventSink> mSink;
-};
-
-class stEventSink : public nsITransportEventSink
-{
-public:
-  NS_DECL_ISUPPORTS
-  NS_DECL_NSITRANSPORTEVENTSINK
-
-  stEventSink(nsISocketTransport* aSocketTransport);
-  ~stEventSink();
-
-private:
-  nsCOMPtr<nsISocketTransport> mSocketTransport;
 };
 
 class stUdpMulticastWorker : public nsIRunnable
@@ -60,6 +41,24 @@ private:
   PRUint64 mTimeout;
   nsTArray<PRUint8> mSendBytes;
   nsCOMPtr<stIUdpMulticastCallback> mCallback;
+};
+
+class stLocalIpAddressWorker : public nsIRunnable
+{
+public:
+  NS_DECL_ISUPPORTS
+  NS_DECL_NSIRUNNABLE
+
+  nsresult Init(const nsACString& aRemoteIpAddress,
+                PRUint16 aRemotePort,
+                PRUint64 aTimeout,
+                stILocalIpAddressCallback* aCallback);
+
+private:
+  nsCString mRemoteIpAddress;
+  PRUint16 mRemotePort;
+  PRUint64 mTimeout;
+  nsCOMPtr<stILocalIpAddressCallback> mCallback;
 };
 
 #endif /* __STNETUTILS__ */
