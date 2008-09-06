@@ -12,10 +12,6 @@
 #include <nsIProxyObjectManager.h>
 #include <nsServiceManagerUtils.h>
 #include <nsXPCOMCIDInternal.h>
-#include <nsISocketTransportService.h>
-#include <nsNetCID.h>
-#include <nsIOutputStream.h>
-#include <nsIInputStream.h>
 
 #define UDP_TIMEOUT 400000
 #define READ_BUFFER 4096
@@ -28,8 +24,6 @@ stNetUtils::stNetUtils()
 
 stNetUtils::~stNetUtils()
 {
-  printf("-------> stNetUtils dtor\n");
-
 }
 
 NS_IMETHODIMP
@@ -75,96 +69,50 @@ stNetUtils::SendUdpMulticast(const nsACString& aIpAddress,
 NS_IMETHODIMP
 stNetUtils::GetLocalIpAddress(const nsACString& aRemoteIpAddress,
                               PRUint16 aRemotePort,
+                              PRUint64 aTimeout,
                               stILocalIpAddressCallback* aCallback)
 {
   NS_ENSURE_ARG_POINTER(aCallback);
   nsresult rv;
 
-  nsCOMPtr<nsISocketTransportService> sts =
-    do_GetService(NS_SOCKETTRANSPORTSERVICE_CONTRACTID);
-  NS_ENSURE_TRUE(sts, NS_ERROR_OUT_OF_MEMORY);
-
-  nsCOMPtr<nsISocketTransport> st;
-  rv = sts->CreateTransport(nsnull,
-                            0,
-                            aRemoteIpAddress,
-                            aRemotePort,
-                            nsnull,
-                            getter_AddRefs(st));
+  nsCOMPtr<nsIProxyObjectManager> pom =
+    do_GetService(NS_XPCOMPROXY_CONTRACTID, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  rv = st->SetTimeout(nsISocketTransport::TIMEOUT_CONNECT, 30);
+  nsCOMPtr<stILocalIpAddressCallback> proxiedCallback;
+  rv = pom->GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
+                              NS_GET_IID(stILocalIpAddressCallback),
+                              aCallback,
+                              NS_PROXY_SYNC | NS_PROXY_ALWAYS,
+                              getter_AddRefs(proxiedCallback));
   NS_ENSURE_SUCCESS(rv, rv);
 
-  rv = st->SetTimeout(nsISocketTransport::TIMEOUT_READ_WRITE, 30);
+  nsRefPtr<stLocalIpAddressWorker> worker =
+    new stLocalIpAddressWorker();
+  NS_ENSURE_TRUE(worker, NS_ERROR_OUT_OF_MEMORY);
+
+  rv = worker->Init(aRemoteIpAddress,
+                    aRemotePort,
+                    aTimeout,
+                    proxiedCallback);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  mSocketTransport = st;
-  /*
-  mSink = new stEventSink(st);
-  NS_ENSURE_TRUE(mSink, NS_ERROR_OUT_OF_MEMORY);
-
-  //mSink = es;
-
-  nsCOMPtr<nsIThread> mainThread;
-  rv = NS_GetMainThread(getter_AddRefs(mainThread));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  printf("----------> here\n");
-
-  rv = st->SetEventSink(mSink, mainThread);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  nsCOMPtr<nsIOutputStream> os;
-  rv = st->OpenOutputStream(0, 0, 0, getter_AddRefs(os));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  PRUint32 n;
-  rv = os->Write("GET /\r\n", 7, &n);
-
-  printf("----------> here\n");
-  */
-  return NS_OK;
-}
-
-NS_IMPL_THREADSAFE_ISUPPORTS1(stEventSink, nsITransportEventSink)
-
-stEventSink::stEventSink(nsISocketTransport* aSocketTransport) :
-  mSocketTransport(aSocketTransport)
-{
-  NS_ASSERTION(aSocketTransport, "aSocketTransport is null!");
-}
-
-stEventSink::~stEventSink()
-{
-  printf("-----------> stEventSink dtor\n");
-}
-
-NS_IMETHODIMP
-stEventSink::OnTransportStatus(nsITransport* aTransport,
-                               nsresult aStatus,
-                               PRUint64 aProgeess,
-                               PRUint64 aProgressMax)
-{
-  NS_ENSURE_ARG_POINTER(aTransport);
-
-  printf("----------> aStatus 0x%.8x\n", aStatus);
-
-  PRBool isAlive;
-  mSocketTransport->IsAlive(&isAlive);
-  printf("----------> isAlive %d\n", isAlive);
-
-  PRNetAddr addr;
-  nsresult rv = mSocketTransport->GetSelfAddr(&addr);
-  if (NS_SUCCEEDED(rv)) {
-    char s[1024];
-    PR_NetAddrToString(&addr, &s[0], 1024);
-    printf("#################### %s\n", s);
-  }
-
+  nsCOMPtr<nsIThread> thread;
+  return NS_NewThread(getter_AddRefs(thread), worker);
 }
 
 NS_IMPL_THREADSAFE_ISUPPORTS1(stUdpMulticastWorker, nsIRunnable)
+
+#define ST_ENSURE_TRUE_DONE(expr, socket, result) \
+  PR_BEGIN_MACRO                                  \
+    if (!expr) {                                  \
+      mCallback->Done(result);                    \
+      if (socket) {                               \
+        PR_Close(socket);                         \
+      }                                           \
+      return NS_OK;                               \
+    }                                             \
+  PR_END_MACRO
 
 nsresult
 stUdpMulticastWorker::Init(const nsACString& aIpAddress,
@@ -193,10 +141,7 @@ stUdpMulticastWorker::Run()
 {
   PRNetAddr addr;
   PRStatus result = PR_StringToNetAddr(mIpAddress.BeginReading(), &addr);
-  if (result != PR_SUCCESS) {
-    mCallback->Done(NS_ERROR_INVALID_ARG);
-    return NS_OK;
-  }
+  ST_ENSURE_TRUE_DONE(result == PR_SUCCESS, nsnull, NS_ERROR_INVALID_ARG);
 
   PRNetAddr readAddr;
   readAddr.inet.family = PR_AF_INET;
@@ -208,17 +153,10 @@ stUdpMulticastWorker::Run()
   writeAddr.inet.ip = addr.inet.ip;
 
   PRFileDesc* socket = PR_NewUDPSocket();
-  if (!socket) {
-    mCallback->Done(NS_ERROR_OUT_OF_MEMORY);
-    return NS_OK;
-  }
+  ST_ENSURE_TRUE_DONE(socket, socket, NS_ERROR_OUT_OF_MEMORY);
 
   result = PR_Bind(socket, &readAddr);
-  if (result != PR_SUCCESS) {
-    mCallback->Done(NS_ERROR_FAILURE);
-    PR_Close(socket);
-    return NS_OK;
-  }
+  ST_ENSURE_TRUE_DONE(result == PR_SUCCESS, socket, NS_ERROR_FAILURE);
 
   PRInt32 send = PR_SendTo(socket,
                            mSendBytes.Elements(),
@@ -226,33 +164,88 @@ stUdpMulticastWorker::Run()
                            0,
                            &writeAddr,
                            UDP_TIMEOUT);
-  if (send != (PRInt32) mSendBytes.Length()) {
-    mCallback->Done(NS_ERROR_FAILURE);
-    PR_Close(socket);
-    return NS_OK;
-  }
-
+  ST_ENSURE_TRUE_DONE(send == (PRInt32) mSendBytes.Length(),
+                 socket,
+                 NS_ERROR_FAILURE);
 
   while (PR_TRUE) {
     char buff[READ_BUFFER];
-    bzero(&buff, READ_BUFFER);
+    bzero(buff, READ_BUFFER);
 
     PRInt32 read = PR_RecvFrom(socket,
-                               &buff,
+                               buff,
                                READ_BUFFER,
                                0,
                                &readAddr,
                                mTimeout);
 
     if (read > 0) {
-      mCallback->Receive(read, (PRUint8*) &buff);
+      mCallback->Receive(read, (PRUint8*) buff);
     }
     else {
       break;
     }
   }
 
-  mCallback->Done(NS_OK);
   PR_Close(socket);
+  mCallback->Done(NS_OK);
+  return NS_OK;
+}
+
+NS_IMPL_THREADSAFE_ISUPPORTS1(stLocalIpAddressWorker, nsIRunnable)
+
+#define ST_ENSURE_TRUE_RESPONSE(expr, socket, result) \
+  PR_BEGIN_MACRO                                      \
+    if (!expr) {                                      \
+      mCallback->Response(result, EmptyCString());    \
+      if (socket) {                                   \
+        PR_Close(socket);                             \
+      }                                               \
+      return NS_OK;                                   \
+    }                                                 \
+  PR_END_MACRO
+
+nsresult
+stLocalIpAddressWorker::Init(const nsACString& aRemoteIpAddress,
+                             PRUint16 aRemotePort,
+                             PRUint64 aTimeout,
+                             stILocalIpAddressCallback* aCallback)
+{
+  NS_ASSERTION(aCallback, "aCallback is null");
+
+  mRemoteIpAddress = aRemoteIpAddress;
+  mRemotePort = aRemotePort;
+  mTimeout = aTimeout;
+  mCallback = aCallback;
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+stLocalIpAddressWorker::Run()
+{
+  PRNetAddr addr;
+  PRStatus result = PR_StringToNetAddr(mRemoteIpAddress.BeginReading(), &addr);
+  ST_ENSURE_TRUE_RESPONSE(result == PR_SUCCESS, nsnull, NS_ERROR_FAILURE);
+
+  addr.inet.family = PR_AF_INET;
+  addr.inet.port = PR_htons(mRemotePort);
+
+  PRFileDesc* socket = PR_NewUDPSocket();
+  ST_ENSURE_TRUE_RESPONSE(socket, socket, NS_ERROR_OUT_OF_MEMORY);
+
+  result = PR_Connect(socket, &addr, mTimeout);
+  ST_ENSURE_TRUE_RESPONSE(result == PR_SUCCESS, socket, NS_ERROR_FAILURE);
+
+  PRNetAddr myAddr;
+  result = PR_GetSockName(socket, &myAddr);
+  ST_ENSURE_TRUE_RESPONSE(result == PR_SUCCESS, socket, NS_ERROR_FAILURE);
+
+  char s[16];
+  result = PR_NetAddrToString(&myAddr, s, 16);
+  ST_ENSURE_TRUE_RESPONSE(result == PR_SUCCESS, socket, NS_ERROR_FAILURE);
+
+  PR_Close(socket);
+  mCallback->Response(NS_OK, nsDependentCString(s));
   return NS_OK;
 }

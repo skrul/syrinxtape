@@ -4,6 +4,12 @@
  */
 #include "nsISupports.idl"
 
+[scriptable, function, uuid(78367053-a163-4e0e-8630-e667adc53cff)]
+interface stILocalIpAddressCallback : nsISupports
+{
+  void response(in nsresult aResult, in ACString aIpAddress);
+};
+
 [scriptable, uuid(832d93ab-fe57-4a34-9c9a-55372a6b076e)]
 interface stIUdpMulticastCallback : nsISupports
 {
@@ -21,4 +27,9 @@ interface stINetUtils : nsISupports
                         in unsigned long aSendLength,
                         [array, size_is(aSendLength)] in PRUint8 aSendBytes,
                         in stIUdpMulticastCallback aCallback);
+
+  void getLocalIpAddress(in ACString aRemoteIpAddress,
+                         in unsigned short aRemotePort,
+                         in unsigned long long aTimeout,
+                         in stILocalIpAddressCallback aCallback);
 };
