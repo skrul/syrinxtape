@@ -25,6 +25,7 @@ const RE_XMLSTANZA = /^<\?xml\s+version\s*=\s*(["'])[^\1]+\1[^?]*\?>/; //" (to f
 const nsdevice = new Namespace("urn:schemas-upnp-org:device-1-0");
 const nsenvelope = new Namespace("http://schemas.xmlsoap.org/soap/envelope/");
 const nswanip = new Namespace("urn:schemas-upnp-org:service:WANIPConnection:1");
+const nscontrol = new Namespace("urn:schemas-upnp-org:control-1-0");
 
 function TRACE(s) {
   dump("******\n* stInternetGatewayService: " + s + "\n*******\n");
@@ -32,17 +33,23 @@ function TRACE(s) {
 
 function stInternetGatewayClient() {
 
+  this._ios = Cc["@mozilla.org/network/io-service;1"]
+                .getService(Ci.nsIIOService);
+  this._nu = Cc["@skrul.com/syrinxtape/net-utils;1"]
+                .createInstance(Ci.stINetUtils);
+
   this._started = false;
 
+  this._status = Ci.stIInternetGatewayClient.STATUS_STOPPED;
   this._statusListeners = [];
-  this._refreshing = false;
-  this._pendingPortMappings = {};
-  this._portMapptings = {};
+  this._pendingPortMappings = [];
+  this._portMapptings = [];
   this._gateway = null;
   this._device = null;
   this._urlBase = null;
   this._controlUrl = null;
   this._wanServiceType = null;
+  this._internalIpAddress = null;
   this._externalIpAddress = null;
 }
 
@@ -57,13 +64,17 @@ stInternetGatewayClient.prototype = {
 stInternetGatewayClient.prototype._refresh =
 function stInternetGatewayClient__refresh()
 {
-  if (this._refreshing) {
+  if (this._status == Ci.stIInternetGatewayClient.STATUS_REFRESHING) {
     return;
   }
 
-  this._refreshing = true;
-  this._statusChange(stIInternetGatewayClient.STATUS_REFRESHING);
-  this._discover();
+  try {
+    this._statusChange(Ci.stIInternetGatewayClient.STATUS_REFRESHING);
+    this._discover();
+  }
+  catch (e) {
+    this._refreshError(e);
+  }
 }
 
 stInternetGatewayClient.prototype._discover =
@@ -71,60 +82,52 @@ function stInternetGatewayClient__discover()
 {
   this._debugMessage("Starting discover...");
 
-  try {
-    var a = [
-      "M-SEARCH * HTTP/1.1",
-      "HOST: " + UPNP_HOST + ":" + UPNP_PORT,
-      "ST: urn:schemas-upnp-org:device:InternetGatewayDevice:1",
-      "MAN: \"ssdp:discover\"",
-      "MX: 3",
-      "",
-      ""
-    ];
-    var b = STRING_TO_BYTES(a.join("\r\n"));
+  var a = [
+    "M-SEARCH * HTTP/1.1",
+    "HOST: " + UPNP_HOST + ":" + UPNP_PORT,
+    "ST: urn:schemas-upnp-org:device:InternetGatewayDevice:1",
+    "MAN: \"ssdp:discover\"",
+    "MX: 3",
+    "",
+    ""
+  ];
+  var b = STRING_TO_BYTES(a.join("\r\n"));
 
-    var udp = Cc["@skrul.com/syrinxtape/net-utils;1"]
-                .createInstance(Ci.stINetUtils);
-
-    var that = this;
-    udp.sendUdpMulticast(UPNP_HOST, UPNP_PORT, 500, b.length, b, {
-      gateway: null,
-      receive: function (length, receive) {
-        try {
-          if (!this.gateway) {
-            var message = BYTES_TO_STRING(receive);
-            var a = /^LOCATION: (.*)$/m.exec(message);
-            if (a) {
-              this.gateway = a[1];
-            }
+  var that = this;
+  this._nu.sendUdpMulticast(UPNP_HOST, UPNP_PORT, 500, b.length, b, {
+    gateway: null,
+    receive: function (length, receive) {
+      try {
+        if (!this.gateway) {
+          var message = BYTES_TO_STRING(receive);
+          var a = /^LOCATION: (.*)$/m.exec(message);
+          if (a) {
+            this.gateway = a[1];
           }
-        }
-        catch (e) {
-          this._refreshError(e);
-        }
-      },
-      done: function(result) {
-        try {
-          if (this.gateway) {
-            that._debugMessage("discover: found gateway " + this.gateway);
-            that._gateway = this.gateway;
-            that._updateDevice();
-          }
-          else {
-            that._refreshError(null,
-                               Ci.stIInternetGatewayClient.ERROR_NO_GATEWAY_FOUND,
-                               "No Internet Gatway Device found");
-          }
-        }
-        catch (e) {
-          that._refreshError(e);
         }
       }
-    });
-  }
-  catch (e) {
-    this._refreshError(e);
-  }
+      catch (e) {
+        this._refreshError(e);
+      }
+    },
+    done: function(result) {
+      try {
+        if (!this.gateway) {
+          that._refreshError(null,
+                             Ci.stIInternetGatewayClient.ERROR_NO_GATEWAY_FOUND,
+                             "No Internet Gatway Device found");
+          return;
+        }
+
+        that._debugMessage("discover: found gateway " + this.gateway);
+        that._gateway = this.gateway;
+        that._updateDevice();
+      }
+      catch (e) {
+        that._refreshError(e);
+      }
+    }
+  });
 }
 
 stInternetGatewayClient.prototype._updateDevice =
@@ -132,47 +135,71 @@ function stInternetGatewayClient__updateDevice()
 {
   this._debugMessage("Updating gateway device");
 
-  try {
-    this._send(this._gateway, "GET", null, null, function (event, xml) {
-      if (xml) {
-        this._device = xml;
-        this._urlBase = xml.nsdevice::URLBase.text();
-
-        // Get the wan service type
-        var service = xml..nsdevice::service.(nsdevice::serviceType == URN_WANIP);
-        if (!service) {
-          service = xml..nsdevice::service.(nsdevice::serviceType == URN_WANPPP)
-        }
-
-        if (!service) {
-          this._refreshError(null,
-                             Ci.stIInternetGatewayClient.ERROR_NO_GATEWAY_FOUND,
-                             "No Internet Gatway Device found (no service)");
-          return;
-        }
-
-        this._serviceType = service.nsdevice::serviceType.text();
-        this._controlUrl = service.nsdevice::controlURL.text().substring(1);
-
-        if (xml..nsdevice::service.(nsdevice::serviceType == URN_WANIP)) {
-          this._serviceType = URN_WANIP;
-        }
-        else {
-          this._serviceType = URN_WANPPP;
-        }
-
-        this._updateExternalIpAddress();
-        return;
-      }
-
+  this._send(this._gateway, "GET", null, null, function (event, xml) {
+    if (!xml) {
       this._refreshError(null,
                          Ci.stIInternetGatewayClient.ERROR_NETWORK,
                          "Bad XML from gateway");
-    });
-  }
-  catch (e) {
-    this._refreshError(e);
-  }
+      return;
+    }
+
+    this._device = xml;
+    this._urlBase = this._ios.newURI(xml.nsdevice::URLBase.text(),
+                                     null,
+                                     null);
+
+    // Get the wan service type
+    var service = xml..nsdevice::service.(nsdevice::serviceType == URN_WANIP);
+    if (service == undefined) {
+      service = xml..nsdevice::service.(nsdevice::serviceType == URN_WANPPP)
+    }
+
+    if (service == undefined) {
+      this._refreshError(null,
+                         Ci.stIInternetGatewayClient.ERROR_NO_GATEWAY_FOUND,
+                         "No Internet Gatway Device found (no service)");
+      return;
+    }
+
+    this._serviceType = service.nsdevice::serviceType.text();
+    this._controlUrl = service.nsdevice::controlURL.text().substring(1);
+
+    if (xml..nsdevice::service.(nsdevice::serviceType == URN_WANIP)) {
+      this._serviceType = URN_WANIP;
+    }
+    else {
+      this._serviceType = URN_WANPPP;
+    }
+
+    this._updateLocalIpAddress();
+  });
+}
+
+stInternetGatewayClient.prototype._updateLocalIpAddress =
+function stInternetGatewayClient__updateLocalIpAddress()
+{
+  this._debugMessage("Updating internal ip address");
+
+  var host = this._urlBase.host;
+  var port = this._urlBase.port;
+
+  var that = this;
+  this._nu.getLocalIpAddress(host, port, 1000, function (aResult, aIpAddress) {
+
+    try {
+      if (aResult != Cr.NS_OK) {
+        that._refreshError(null, aResult, "Unable to get local ip address");
+        return;
+      }
+
+      that._internalIpAddress = aIpAddress;
+      that._debugMessage("Got internal ip address " + aIpAddress);
+      that._updateExternalIpAddress();
+    }
+    catch (e) {
+      that._refreshError(e);
+    }
+  });
 }
 
 stInternetGatewayClient.prototype._updateExternalIpAddress =
@@ -180,34 +207,40 @@ function stInternetGatewayClient__updateExternalIpAddress()
 {
   this._debugMessage("Updating external ip address");
 
-  try {
-    var body =
-      <m:GetExternalIPAddress
-        xmlns:m={this._serviceType}
-      />;
-    var e = ENVELOPE(body);
+  var body = <m:GetExternalIPAddress xmlns:m={this._serviceType}/>;
+  var e = ENVELOPE(body);
 
-    var action = this._serviceType + "#GetExternalIPAddress";
+  var action = this._serviceType + "#GetExternalIPAddress";
 
-    this._sendSoap(this._controlUrl, action, e, function (event, xml) {
-      try {
-        if (xml) {
-          this._externalIpAddress = xml..NewExternalIPAddress.text();
-          this._debugMessage("externalIpAddress = " + this._externalIpAddress);
-          return;
-        }
-
-        this._refreshError(null,
+  var that = this;
+  this._sendSoap(this._controlUrl, action, e, function (xml, errorCode, errorDesc) {
+    try {
+      if (errorCode) {
+        that._refreshError(null,
                            Ci.stIInternetGatewayClient.ERROR_NETWORK,
-                           "Bad XML from gateway");
+                           "Bad XML from gateway " + errorCode + " " + errorDesc);
+        return;
       }
-      catch (e) {
-        this._refreshError(e);
-      }
-    });
-  }
-  catch (e) {
-    this._refreshError(e);
+      that._externalIpAddress = xml..NewExternalIPAddress.text();
+      that._debugMessage("externalIpAddress = " + this._externalIpAddress);
+      that._ensurePortMappings();
+    }
+    catch (e) {
+      this._refreshError(e);
+    }
+  });
+}
+
+stInternetGatewayClient.prototype._ensurePortMappings =
+function stInternetGatewayClient__ensurePortMappings()
+{
+  this._debugMessage("ensurePortMessage");
+  // do something here to ensure port mappings
+
+  this._statusChange(Ci.stIInternetGatewayClient.STATUS_READY);
+  if (this._pendingPortMappings.length > 0) {
+    var mapping = this._pendingPortMappings.shift();
+    this.addPortMapping(mapping.internal, mapping.external, mapping.listener);
   }
 }
 
@@ -254,15 +287,46 @@ function stInternetGatewayClient__sendSoap(aPath, aAction, aXmlBody, aCallback)
   var headers = {
     SOAPAction: aAction
   };
-  var url = this._urlBase + aPath;
-  this._send(url, "POST", headers, aXmlBody.toXMLString(), aCallback);
+  var url = this._urlBase.spec + aPath;
+  var data = '<?xml version="1.0"?>\r\n' + aXmlBody.toXMLString();
+  var that = this;
 
+  data = data.replace("STUPIDHACK","");
+
+  this._send(url, "POST", headers, data, function (event, xml) {
+
+    var errorCode = 0;
+    var errorDescription;
+
+    try {
+      if (xml) {
+        var fault = xml..nsenvelope::Fault;
+        if (fault == undefined) {
+          xml = xml..nsenvelope::Body;
+        }
+        else {
+          errorCode = fault..nscontrol::errorCode.text();
+          errorDescription = fault..nscontrol::errorDescription.text();
+          xml = fault;
+        }
+      }
+      else {
+        errorCode = 666;
+        errorDescription = "Bad XML";
+      }
+    }
+    catch (e) {
+      errorCode = 666;
+      errorDescription = e.message;
+    }
+
+    aCallback.apply(that, [xml, errorCode, errorDescription]);
+  });
 }
 
 stInternetGatewayClient.prototype._refreshError =
 function stInternetGatewayClient__refreshError(aException, aError, aMessage)
 {
-  this._refreshing = false;
   if (aException) {
     aError = Ci.stIInternetGatewayClient.ERROR_OTHER;
     aMessage = aException;
@@ -323,7 +387,7 @@ function stInternetGatewayClient_start()
   }
 
   this._started = true;
-  this._discover();
+  this._refresh();
 }
 
 stInternetGatewayClient.prototype.stop =
@@ -348,8 +412,51 @@ function stInternetGatewayClient_removeStatusListener(aListener)
 }
 
 stInternetGatewayClient.prototype.addPortMapping =
-function stInternetGatewayClient_addPortMapping(aLocal, aExternal, aListener)
+function stInternetGatewayClient_addPortMapping(aInternal, aExternal, aListener)
 {
+  if (this._status != Ci.stIInternetGatewayClient.STATUS_READY) {
+    this._pendingPortMappings.push({
+      internal: aInternal,
+      external: aExternal,
+      listener: aListener
+    });
+    return;
+  }
+
+  this._debugMessage("Mapping port " + aInternal + " " + aExternal);
+
+  var body =
+    <m:AddPortMapping xmlns:m={this._serviceType}>
+      <NewRemoteHost>STUPIDHACK</NewRemoteHost>
+      <NewExternalPort>{aExternal}</NewExternalPort>
+      <NewProtocol>TCP</NewProtocol>
+      <NewInternalPort>{aInternal}</NewInternalPort>
+      <NewInternalClient>{this._internalIpAddress}</NewInternalClient>
+      <NewEnabled>1</NewEnabled>
+      <NewPortMappingDescription>syrinxtape</NewPortMappingDescription>
+      <NewLeaseDuration>0</NewLeaseDuration>
+    </m:AddPortMapping>;
+  var e = ENVELOPE(body);
+
+  var action = '"' + this._serviceType + "#AddPortMapping" + '"';
+
+  var that = this;
+  this._sendSoap(this._controlUrl, action, e, function (xml, errorCode, errorDesc) {
+    try {
+      if (errorCode) {
+        that._refreshError(null,
+                           Ci.stIInternetGatewayClient.ERROR_NETWORK,
+                           "Bad XML from gateway (addPortMapping) " +
+                             errorCode + " " + errorDesc);
+        return;
+      }
+
+      TRACE(xml);
+    }
+    catch (e) {
+      this._refreshError(e);
+    }
+  });
 }
 
 stInternetGatewayClient.prototype.removePortMapping =
@@ -379,14 +486,14 @@ function BYTES_TO_STRING(b) {
 
 function ENVELOPE(aBody) {
   var e =
-    <s:Envelope
-      xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"
-      s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
-      <s:Body/>
-    </s:Envelope>;
+    <SOAP-ENV:Envelope
+      xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"
+      SOAP-ENV:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+      <SOAP-ENV:Body/>
+    </SOAP-ENV:Envelope>;
 
   if (aBody) {
-    e.nsenvelope::Envelope.nsenvelope::Body += aBody;
+    e.nsenvelope::Body.* += aBody;
   }
 
   return e;
