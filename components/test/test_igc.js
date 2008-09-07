@@ -28,6 +28,18 @@ function runTest () {
 
   });
 
+  igs.addPortMapping(80, 10002, {
+    onAdded: function (aIpAddress, aInternal, aExternal) {
+      log("onAdded " + aIpAddress + " " + aInternal + " " + aExternal);
+    },
+    onRemoved: function (aInternal) {
+      log("onRemoved " + aInternal);
+    },
+    onError: function (aInternal, aExternal, aMessage) {
+      log("onError " + aInternal + " " + aExternal + " " + aMessage);
+    }
+  });
+
   igs.start();
 
   while (true) {

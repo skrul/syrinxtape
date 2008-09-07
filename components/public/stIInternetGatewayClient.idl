@@ -17,10 +17,10 @@ interface stIInternetGatewayServiceStatusListener : nsISupports
 interface stIPortMappingListener : nsISupports
 {
   void onAdded(in AString aIpAddress,
-               in unsigned short aLocal,
+               in unsigned short aInternal,
                in unsigned short aExternal);
-  void onRemoved(in unsigned short aLocal);
-  void onError(in unsigned short aLocal,
+  void onRemoved(in unsigned short aInternal);
+  void onError(in unsigned short aInternal,
                in unsigned short aExternal,
                in AString aMessage);
 };
@@ -42,8 +42,8 @@ interface stIInternetGatewayClient : nsISupports
   void addStatusListener(in stIInternetGatewayServiceStatusListener aListener);
   void removeStatusListener(in stIInternetGatewayServiceStatusListener aListener);
 
-  void addPortMapping(in unsigned short aLocal,
+  void addPortMapping(in unsigned short aInternal,
                       in unsigned short aExternal,
                       in stIPortMappingListener aListener);
-  void removePortMapping(in unsigned short aLocal);
+  void removePortMapping(in unsigned short aInternal);
 };
