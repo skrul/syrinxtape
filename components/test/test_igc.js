@@ -23,20 +23,21 @@ function runTest () {
       log("onNewExternalIpAddress " + aIpAddress);
     },
     onDebugMessage: function (aMessage) {
-      log("onDebugMessage " + aMessage);
+//      log("onDebugMessage " + aMessage);
     }
 
   });
 
-  igs.addPortMapping(80, 10002, {
+  igs.addPortMapping(80, 10003, {
     onAdded: function (aIpAddress, aInternal, aExternal) {
       log("onAdded " + aIpAddress + " " + aInternal + " " + aExternal);
+      igs.stop();
     },
     onRemoved: function (aInternal) {
       log("onRemoved " + aInternal);
     },
-    onError: function (aInternal, aExternal, aMessage) {
-      log("onError " + aInternal + " " + aExternal + " " + aMessage);
+    onError: function (aInternal, aExternal, aErrorCode, aErrorDescription) {
+      log("onError " + aInternal + " " + aExternal + " " + aErrorCode + " " + aErrorDescription);
     }
   });
 
@@ -46,18 +47,5 @@ function runTest () {
     mainThread.processNextEvent(true);
   }
 
-/*
-  var envelope =
-    <s:Envelope
-      xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"
-      s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
-      <s:Body>
-        <m:GetExternalIPAddress
-          xmlns:m="urn:schemas-upnp-org:service:WANIPConnection:1"/>
-      </s:Body>
-    </s:Envelope>;
-
-  log(envelope.toXMLString());
-*/
   return Components.results.NS_OK;
 }

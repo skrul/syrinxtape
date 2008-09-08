@@ -39,11 +39,12 @@ function stInternetGatewayClient() {
                 .createInstance(Ci.stINetUtils);
 
   this._started = false;
+  this._starting = false;
 
   this._status = Ci.stIInternetGatewayClient.STATUS_STOPPED;
   this._statusListeners = [];
   this._pendingPortMappings = [];
-  this._portMapptings = [];
+  this._portMappings = [];
   this._gateway = null;
   this._device = null;
   this._urlBase = null;
@@ -111,6 +112,12 @@ function stInternetGatewayClient__discover()
       }
     },
     done: function(result) {
+
+      if (that._status == Ci.stIInternetGatewayClient.STATUS_STOPPING) {
+        that._stop();
+        return;
+      }
+
       try {
         if (!this.gateway) {
           that._refreshError(null,
@@ -136,6 +143,11 @@ function stInternetGatewayClient__updateDevice()
   this._debugMessage("Updating gateway device");
 
   this._send(this._gateway, "GET", null, null, function (event, xml) {
+    if (this._status == Ci.stIInternetGatewayClient.STATUS_STOPPING) {
+      this._stop();
+      return;
+    }
+
     if (!xml) {
       this._refreshError(null,
                          Ci.stIInternetGatewayClient.ERROR_NETWORK,
@@ -185,6 +197,10 @@ function stInternetGatewayClient__updateLocalIpAddress()
 
   var that = this;
   this._nu.getLocalIpAddress(host, port, 1000, function (aResult, aIpAddress) {
+    if (that._status == Ci.stIInternetGatewayClient.STATUS_STOPPING) {
+      that._stop();
+      return;
+    }
 
     try {
       if (aResult != Cr.NS_OK) {
@@ -208,22 +224,36 @@ function stInternetGatewayClient__updateExternalIpAddress()
   this._debugMessage("Updating external ip address");
 
   var body = <m:GetExternalIPAddress xmlns:m={this._serviceType}/>;
-  var e = ENVELOPE(body);
+  var action = "GetExternalIPAddress";
 
-  var action = this._serviceType + "#GetExternalIPAddress";
+  this._sendSoap(this._controlUrl, action, body, function (xml, errorCode, errorDesc) {
+    if (this._status == Ci.stIInternetGatewayClient.STATUS_STOPPING) {
+      this._stop();
+      return;
+    }
 
-  var that = this;
-  this._sendSoap(this._controlUrl, action, e, function (xml, errorCode, errorDesc) {
     try {
       if (errorCode) {
-        that._refreshError(null,
+        this._refreshError(null,
                            Ci.stIInternetGatewayClient.ERROR_NETWORK,
                            "Bad XML from gateway " + errorCode + " " + errorDesc);
         return;
       }
-      that._externalIpAddress = xml..NewExternalIPAddress.text();
-      that._debugMessage("externalIpAddress = " + this._externalIpAddress);
-      that._ensurePortMappings();
+      this._externalIpAddress = xml..NewExternalIPAddress;
+      this._debugMessage("externalIpAddress = " + this._externalIpAddress);
+
+      if (this._starting) {
+        this._deleteAllMappings(function () {
+          if (this._status == Ci.stIInternetGatewayClient.STATUS_STOPPING) {
+            this._stop();
+            return;
+          }
+          this._ensurePortMappings();
+        });
+      }
+      else {
+        this._ensurePortMappings();
+      }
     }
     catch (e) {
       this._refreshError(e);
@@ -232,17 +262,230 @@ function stInternetGatewayClient__updateExternalIpAddress()
 }
 
 stInternetGatewayClient.prototype._ensurePortMappings =
-function stInternetGatewayClient__ensurePortMappings()
+function stInternetGatewayClient__ensurePortMappings(aMappings)
 {
-  this._debugMessage("ensurePortMessage");
-  // do something here to ensure port mappings
+  this._debugMessage("ensurePortMappings");
+
+  if (!aMappings) {
+    aMappings = [];
+    this._portMappings.forEach(function (e) { aMappings.push(e); });
+  }
+
+  if (aMappings.length > 0) {
+    var mapping = aMappings.shift();
+
+    this._getPortMappingByExternal(mapping.external, function (xml, errorCode, errorDesc) {
+      if (this._status == Ci.stIInternetGatewayClient.STATUS_STOPPING) {
+        this._stop();
+        return;
+      }
+
+      try {
+        if (xml..NewInternalPort == mapping.internal &&
+            xml..NewInternalClient == this._internalIpAddress &&
+            xml..NewEnabled == "1" &&
+            xml..NewPortMappingDescription == "syrinxtape") {
+
+          // All is well, keep going
+          this._ensurePortMappings(aMappings);
+          return;
+        }
+
+        // Remove this mapping
+        this._portMappings = this._portMappings.filter(function (e) {
+          return e.external != mapping.external;
+        });
+
+        try {
+          mapping.callback.onError(mapping.internal,
+                                   mapping.external,
+                                   123,
+                                   "Mapping no longer valid");
+        }
+        catch (e) {
+          Cu.reportError(e);
+        }
+
+        this._ensurePortMappings(aMappings);
+      }
+      catch (e) {
+        this._refreshError(e);
+      }
+    });
+
+  }
+
+  this._finishRefresh();
+}
+
+stInternetGatewayClient.prototype._deleteAllMappings =
+function stInternetGatewayClient__deleteAllMappings(aCallback)
+{
+  this._debugMessage("deleteAllMappings");
+
+  this._getAllMappings([0], [], function (aMappings) {
+    try {
+      var mine = aMappings.filter(function (m) {
+        return m.description == "syrinxtape";
+      });
+      this._deleteMappings(mine, aCallback);
+    }
+    catch (e) {
+      Cu.reportError(e);
+    }
+    aCallback.apply(this);
+  });
+}
+
+stInternetGatewayClient.prototype._deleteMappings =
+function stInternetGatewayClient__deleteMappings(aMappings, aCallback)
+{
+  this._debugMessage("deleteMappings");
+
+  if (aMappings.length == 0) {
+    aCallback.apply(this);
+    return;
+  }
+
+  var mapping = aMappings.shift();
+  var body =
+    <m:DeletePortMapping xmlns:m={this._serviceType}>
+      <NewRemoteHost>STUPIDHACK</NewRemoteHost>
+      <NewExternalPort>{mapping.external}</NewExternalPort>
+      <NewProtocol>{mapping.protocol}</NewProtocol>
+    </m:DeletePortMapping>;
+  var action = "DeletePortMapping";
+
+  this._sendSoap(this._controlUrl, action, body, function (xml, errorCode, errorDesc) {
+    // Don't really care if this fails
+    if (errorCode) {
+      Cu.reportError("delete error: " + errorCode + " " + errorDesc);
+    }
+    this._deleteMappings(aMappings, aCallback);
+  });
+}
+
+stInternetGatewayClient.prototype._finishRefresh =
+function stInternetGatewayClient__finishRefresh()
+{
+  this._debugMessage("finishRefresh");
+
+  if (this._status == Ci.stIInternetGatewayClient.STATUS_STOPPING) {
+    this._stop();
+    return;
+  }
 
   this._statusChange(Ci.stIInternetGatewayClient.STATUS_READY);
+  this._starting = false;
+  this._processPendingPortMappings();
+}
+
+stInternetGatewayClient.prototype._processPendingPortMappings =
+function stInternetGatewayClient__processPendingPortMappings()
+{
   if (this._pendingPortMappings.length > 0) {
     var mapping = this._pendingPortMappings.shift();
     this.addPortMapping(mapping.internal, mapping.external, mapping.listener);
   }
 }
+
+stInternetGatewayClient.prototype._getPortMappingByExternal =
+function stInternetGatewayClient__getPortMappingByExternal(aExternal, aCallback)
+{
+  this._debugMessage("getPortMappingByExternal");
+
+  var body =
+    <m:GetSpecificPortMappingEntry xmlns:m={this._serviceType}>
+      <NewRemoteHost>STUPIDHACK</NewRemoteHost>
+      <NewExternalPort>{aExternal}</NewExternalPort>
+      <NewProtocol>TCP</NewProtocol>
+    </m:GetSpecificPortMappingEntry>;
+  var action = "GetSpecificPortMappingEntry";
+
+  this._sendSoap(this._controlUrl, action, body, function (xml, errorCode, errorDesc) {
+    try {
+      if (errorCode) {
+        aCallback.apply(this, [xml, errorCode, errorDesc]);
+        return;
+      }
+
+      var ns = Namespace(this._serviceType);
+      var r = xml..ns::GetSpecificPortMappingEntryResponse;
+      if (r == undefined) {
+        aCallback.apply(this, [xml, 666, "No check response"]);
+        return;
+      }
+
+      aCallback.apply(this, [r, 0, null]);
+    }
+    catch (e) {
+      aCallback.apply(this, [xml, 666, e.message]);
+    }
+  });
+}
+
+stInternetGatewayClient.prototype._getPortMappingByIndex =
+function stInternetGatewayClient__getPortMappingByIndex(aIndex, aCallback)
+{
+  this._debugMessage("getPortMappingByIndex");
+
+  var body =
+    <m:GetGenericPortMappingEntry xmlns:m={this._serviceType}>
+      <NewPortMappingIndex>{aIndex}</NewPortMappingIndex>
+    </m:GetGenericPortMappingEntry>;
+  var action = "GetGenericPortMappingEntry";
+
+  this._sendSoap(this._controlUrl, action, body, function (xml, errorCode, errorDesc) {
+    try {
+      if (errorCode) {
+        aCallback.apply(this, [xml, errorCode, errorDesc]);
+        return;
+      }
+
+      var ns = Namespace(this._serviceType);
+      var r = xml..ns::GetGenericPortMappingEntryResponse;
+      if (r == undefined) {
+        aCallback.apply(this, [xml, 666, "No response"]);
+        return;
+      }
+
+      aCallback.apply(this, [r, 0, null]);
+    }
+    catch (e) {
+      aCallback.apply(this, [xml, 666, e.message]);
+    }
+  });
+}
+
+stInternetGatewayClient.prototype._getAllMappings =
+function stInternetGatewayClient__getAllMappings(aIndex, aMappings, aCallback)
+{
+  this._getPortMappingByIndex(aIndex, function (xml, errorCode, errorDesc) {
+    try {
+      // If we get an error, we're done
+      if (errorCode) {
+        aCallback.apply(this, [aMappings]);
+        return;
+      }
+
+      var mapping = {
+        external: xml..NewExternalPort.text(),
+        protocol: xml..NewProtocol.text(),
+        internal: xml..NewInternalPort.text(),
+        client: xml..NewInternalClient.text(),
+        enabled: xml..NewEnabled.text(),
+        description: xml..NewPortMappingDescription.text()
+      };
+      aMappings.push(mapping);
+      aIndex++;
+      this._getAllMappings(aIndex, aMappings, aCallback);
+    }
+    catch (e) {
+      aCallback.apply(this, [null]);
+    }
+  });
+}
+
 
 stInternetGatewayClient.prototype._send =
 function stInternetGatewayClient__send(aUrl, aMethod, aHeaders, aBody, aCallback)
@@ -255,7 +498,6 @@ function stInternetGatewayClient__send(aUrl, aMethod, aHeaders, aBody, aCallback
 
   if (aHeaders) {
     for (k in aHeaders) {
-      TRACE(k);
       xhr.setRequestHeader(k, aHeaders[k]);
     }
   }
@@ -285,14 +527,22 @@ stInternetGatewayClient.prototype._sendSoap =
 function stInternetGatewayClient__sendSoap(aPath, aAction, aXmlBody, aCallback)
 {
   var headers = {
-    SOAPAction: aAction
+    SOAPAction: this._serviceType + "#" + aAction
   };
   var url = this._urlBase.spec + aPath;
-  var data = '<?xml version="1.0"?>\r\n' + aXmlBody.toXMLString();
-  var that = this;
 
+  var e =
+    <s:Envelope
+      xmlns:s="http://schemas.xmlsoap.org/soap/envelope/"
+      s:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+      <s:Body/>
+    </s:Envelope>;
+  e.nsenvelope::Body.* += aXmlBody;
+
+  var data = '<?xml version="1.0"?>\r\n' + e.toXMLString();
   data = data.replace("STUPIDHACK","");
 
+  var that = this;
   this._send(url, "POST", headers, data, function (event, xml) {
 
     var errorCode = 0;
@@ -334,6 +584,22 @@ function stInternetGatewayClient__refreshError(aException, aError, aMessage)
 
   this._error(aError, aMessage);
   this._statusChange(Ci.stIInternetGatewayClient.STATUS_STOPPED);
+}
+
+stInternetGatewayClient.prototype._addPortMappingError =
+function stInternetGatewayClient__addPortMappingError(aListener,
+                                                      aInternal,
+                                                      aExternal,
+                                                      aErrorCode,
+                                                      aErrorDescription)
+{
+  try {
+    aListener.onError(aInternal, aExternal, aErrorCode, aErrorDescription);
+  }
+  catch (e) {
+    Cu.reportError(e);
+  }
+  this._processPendingPortMappings();
 }
 
 stInternetGatewayClient.prototype._notifyStatus =
@@ -378,6 +644,17 @@ function stInternetGatewayClient__error(aError, aMessage)
   });
 }
 
+stInternetGatewayClient.prototype._stop =
+function stInternetGatewayClient__stop()
+{
+  this._debugMessage("stop");
+
+  this._deleteAllMappings(function() {
+    this._started = false;
+    this._statusChange(Ci.stIInternetGatewayClient.STATUS_STOPPED);
+  });
+}
+
 // stIInternetGatewayClientnternetGatewayClient
 stInternetGatewayClient.prototype.start =
 function stInternetGatewayClient_start()
@@ -387,12 +664,28 @@ function stInternetGatewayClient_start()
   }
 
   this._started = true;
+  this._starting = true;
   this._refresh();
 }
 
 stInternetGatewayClient.prototype.stop =
 function stInternetGatewayClient_stop()
 {
+  if (!this._started) {
+    return;
+  }
+
+  this._starting = false;
+  var status = this._status;
+  this._statusChange(Ci.stIInternetGatewayClient.STATUS_STOPPING);
+
+  if (status == Ci.stIInternetGatewayClient.STATUS_REFRESHING) {
+    this._debugMessage("stop pending...");
+    this._stopPending = true;
+    return;
+  }
+
+  this._stop();
 }
 
 stInternetGatewayClient.prototype.addStatusListener =
@@ -436,25 +729,76 @@ function stInternetGatewayClient_addPortMapping(aInternal, aExternal, aListener)
       <NewPortMappingDescription>syrinxtape</NewPortMappingDescription>
       <NewLeaseDuration>0</NewLeaseDuration>
     </m:AddPortMapping>;
-  var e = ENVELOPE(body);
+  var action = "AddPortMapping";
 
-  var action = '"' + this._serviceType + "#AddPortMapping" + '"';
-
-  var that = this;
-  this._sendSoap(this._controlUrl, action, e, function (xml, errorCode, errorDesc) {
+  this._sendSoap(this._controlUrl, action, body, function (xml, errorCode, errorDesc) {
     try {
       if (errorCode) {
-        that._refreshError(null,
-                           Ci.stIInternetGatewayClient.ERROR_NETWORK,
-                           "Bad XML from gateway (addPortMapping) " +
-                             errorCode + " " + errorDesc);
+        this._addPortMappingError(aListener,
+                                  aInternal,
+                                  aExternal,
+                                  errorCode,
+                                  errorDesc);
         return;
       }
 
-      TRACE(xml);
+      var ns = Namespace(this._serviceType);
+      if (xml..ns::AddPortMappingResponse == undefined) {
+        this._addPortMappingError(aListener,
+                                  aInternal,
+                                  aExternal,
+                                  666,
+                                  "No add response");
+        return;
+      }
+
+      // Let's make sure the request worked
+      this._getPortMappingByExternal(aExternal, function (xml, errorCode, errorDesc) {
+        try {
+          if (errorCode) {
+            this._addPortMappingError(aListener,
+                                      aInternal,
+                                      aExternal,
+                                      errorCode,
+                                      errorDesc);
+            return;
+          }
+
+          if (xml..NewInternalPort == aInternal &&
+              xml..NewInternalClient == this._internalIpAddress &&
+              xml..NewEnabled == "1" &&
+              xml..NewPortMappingDescription == "syrinxtape") {
+            aListener.onAdded(this._externalIpAddress, aInternal, aExternal);
+            this._portMappings.push({
+              internal: aInternal,
+              external: aExternal,
+              listener: aListener
+            });
+            this._processPendingPortMappings();
+            return;
+          }
+
+          this._addPortMappingError(aListener,
+                                    aInternal,
+                                    aExternal,
+                                    666,
+                                    "Bad mapping?");
+        }
+        catch (e) {
+          this._addPortMappingError(aListener,
+                                    aInternal,
+                                    aExternal,
+                                    666,
+                                    e.message);
+        }
+      });
     }
     catch (e) {
-      this._refreshError(e);
+      this._addPortMappingError(aListener,
+                                aInternal,
+                                aExternal,
+                                666,
+                                e.message);
     }
   });
 }
@@ -482,19 +826,4 @@ function BYTES_TO_STRING(b) {
     s += String.fromCharCode(b[i]);
   }
   return s;
-}
-
-function ENVELOPE(aBody) {
-  var e =
-    <SOAP-ENV:Envelope
-      xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"
-      SOAP-ENV:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
-      <SOAP-ENV:Body/>
-    </SOAP-ENV:Envelope>;
-
-  if (aBody) {
-    e.nsenvelope::Body.* += aBody;
-  }
-
-  return e;
 }
