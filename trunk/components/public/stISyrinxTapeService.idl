@@ -1,0 +1,53 @@
+/*
+ * Copyright (C) 2008 by Steve Krulewitz <skrulx@gmail.com>
+ * Licensed under GPLv2 or later, see file LICENSE in the xpi for details.
+ */
+#include "nsISupports.idl"
+
+interface sbIMediaList;
+interface nsIURI;
+
+[scriptable, uuid(26f2b354-0475-43bd-9feb-1da5efe845ba)]
+interface stIConfiguration : nsISupports
+{
+  readonly attribute boolean gatewayEnabled;
+  readonly attribute unsigned long internalPort;
+  readonly attribute unsigned long extermalPort;
+};
+
+[scriptable, uuid(f92f0199-6e2d-4f65-bac9-8e9447213ac1)]
+interface stIStatusListener : nsISupports
+{
+  void onStatus(in unsigned long aStatus, in unsigned long aError);
+  void onNetworkUpdated();
+};
+
+[scriptable, uuid(8643f380-ba5b-44a4-a2ea-6d6cc0e03242)]
+interface stISyrinxTapeService : nsISupports
+{
+  const unsigned long STATUS_STOPPED = 0;
+  const unsigned long STATUS_STARTING = 1;
+  const unsigned long STATUS_READY = 2;
+  const unsigned long STATUS_STOPPING = 3;
+
+  const unsigned long ERROR_NONE = 0;
+  const unsigned long ERROR_LOCAL_PORT = 1;
+  const unsigned long ERROR_REMOET_PORT = 2;
+  const unsigned long ERROR_OTHER = 3;
+
+  readonly attribute unsigned long status;
+
+  readonly attribute AString errorMessage;
+  readonly attribute unsigned long error;
+
+  void setConfiguration(in stIConfiguration aConfiguration);
+  stIConfiguration getConfiguration();
+
+  void addStatusListener(in stIStatusListener aListener);
+  void removeStatusListener(in stIStatusListener aListener);
+
+  void publish(in sbIMediaList aMediaList);
+  void unpublish(in sbIMediaList aMediaList);
+
+  AString getUrl(in sbIMediaList aMediaList);
+};

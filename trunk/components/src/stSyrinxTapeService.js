@@ -53,10 +53,20 @@ function stSyrinxTapeService() {
                 .getService(Ci.sbIPlaylistPlayback);
   this._ios = Cc["@mozilla.org/network/io-service;1"]
                 .getService(Ci.nsIIOService);
+  this._igc = Cc["@skrul.com/syrinxtape/internet-gateway-client;1"]
+                .createInstance(Ci.stIInternetGatewayClient);
+
+  this._status = Ci.stISyrinxTapeService.STATE_STOPPED;
+  this._statusListeners = [];
+
+  this._error = Ci.stISyrinxTapeService.ERROR_OK;
+  this._errorMessage = "Stopped";
+
+  this._startPending = false;
+  this._stopPending = false;
 
   this._dataDir = null;
-
-  this._server = null;
+  this._httpServer = null;
 
   var obs = Cc["@mozilla.org/observer-service;1"]
               .getService(Ci.nsIObserverService);
@@ -68,9 +78,35 @@ stSyrinxTapeService.prototype = {
   classDescription: "stSyrinxTapeService",
   classID:          Components.ID("8e3ba203-147a-4f2f-9966-eadbef107fae"),
   contractID:       "@skrul.com/syrinxtape/service;1",
-  QueryInterface:   XPCOMUtils.generateQI([Ci.nsIObserver,
-                                           Ci.stIHttpRequestHandler]),
+  QueryInterface:   XPCOMUtils.generateQI([Ci.stSyrinxTapeService,
+                                           Ci.stIPortMappingListener,
+                                           Ci.stIHttpRequestHandler,
+                                           Ci.nsIObserver]),
   _xpcom_categories: [{ category: "app-startup" }]
+}
+
+stSyrinxTapeService.prototype._notify =
+function stSyrinxTapeService__notify(aFunc)
+{
+  this._statusListeners.forEach(function(l) {
+    try {
+      aFunc.apply(this, [l]);
+    }
+    catch (e) {
+      Cu.reportError(e);
+    }
+  });
+}
+
+stSyrinxTapeService.prototype._statusChange =
+function stSyrinxTapeService__statusChange(aStatus)
+{
+  if (this._status != aStatus) {
+    this._status = aStatus;
+    this._notify(function(l) {
+      l.aStatus(onStatus, this._error);
+    });
+  }
 }
 
 stSyrinxTapeService.prototype._getResourceUrl =
@@ -220,21 +256,22 @@ stSyrinxTapeService.prototype._startup =
 function stSyrinxTapeService__startup()
 {
   TRACE("stSyrinxTapeService::_startup\n");
-  return;
 
   if (this._started) {
     return;
   }
 
+  this._prefs = Cc["@mozilla.org/preferences-service;1"]
+                  .getService(Components.interfaces.nsIPrefService)
+                  .getBranch("syrinxtape.");
+
   this._dataDir = ST_GetDataDir();
   this._pm = Cc["@songbirdnest.com/Songbird/Properties/PropertyManager;1"]
                .getService(Ci.stIPropertyManager);
 
-  this._server = Cc["@skrul.com/syrinxtape/jshttp;1"]
-                   .createInstance(Ci.stIHttpServer);
-  this._server.registerPathHandler("/", this);
-  this._server.start(5079);
-
+  this._httpServer = Cc["@skrul.com/syrinxtape/jshttp;1"]
+                       .createInstance(Ci.stIHttpServer);
+  this._httpServer.registerPathHandler("/", this);
   this._started = true;
 }
 
@@ -246,11 +283,119 @@ function stSyrinxTapeService__shutdown()
   obs.removeObserver(this, SB_LIBRARY_MANAGER_READY_TOPIC);
   obs.removeObserver(this, SB_LIBRARY_MANAGER_BEFORE_SHUTDOWN_TOPIC);
 
-  if (this._started) {
-    this._server.stop();
-  }
+  this._stopService();
 
   this._started = false;
+}
+
+stSyrinxTapeService.prototype._startService =
+function stSyrinxTapeService__startService()
+{
+  this._statusChange(Ci.stISyrinxTapeService.STATUS_STARTING);
+
+  var config = this._getConfiguration();
+  try {
+    try {
+      this._httpServer.start(config.internalPort);
+    }
+    catch (e) {
+      this._stopService(Ci.stISyrinxTapeService.ERROR_LOCAL_PORT, e.message);
+    }
+
+    if (!config.gatewayEnabled) {
+      this._startServiceFinished();
+      return;
+    }
+
+    var that = this;
+    var listener = {
+      onStatusChange: function (aStatus) {
+        if (aStatus == Ci.stIInternetGatewayClient.STATUS_READY) {
+          that._igs.removeStatusListener(listener);
+          that._igs.addPortMapping(config.internalPort,
+                                   config.externalPort,
+                                   this);
+        }
+      },
+      onError: function (aError, aMessage) {
+        this._stopService(Ci.stISyrinxTapeService.ERROR_REMOTE_PORT, e.message);
+      },
+      onNewExternalIpAddress: function (aIpAddress) {
+      },
+      onDebugMessage: function (aMessage) {
+      }
+    };
+    this._igc.addStatusListener(listener);
+    this._igc.stop();
+  }
+  catch (e) {
+    this._stopService(Ci.stISyrinxTapeService.ERROR_OTHER, e.message);
+  }
+}
+
+stSyrinxTapeService.prototype._startServiceFinished =
+function stSyrinxTapeService__startServiceFinished()
+{
+  this._error = Ci.stISyrinxTapeService.ERROR_NONE;
+  this._errorMessage = "OK";
+  this._statusChange(Ci.stISyrinxTapeService.STATUS_READY);
+
+  if (this._stopPending) {
+    this._stopPending = false;
+    this._stopService();
+  }
+}
+
+stSyrinxTapeService.prototype._stopService =
+function stSyrinxTapeService__stopService(aError, aErrorMessage)
+{
+  this._statusChange(Ci.stISyrinxTapeService.STATUS_STOPPING);
+
+  if (this._httpServerStarted) {
+    try {
+      this._httpServer.stop();
+    }
+    catch (e) {
+      Cu.reportError(e);
+    }
+    this._httpServerStarted = false;
+  }
+
+  if (this._igc.status == Ci.stIInternetGatewayClient.STATUS_STOPPED) {
+    this._stopServiceFinished(aError, aErrorMessage);
+  }
+  else {
+    var that = this;
+    var listener = {
+      onStatusChange: function (aStatus) {
+        if (aStatus == Ci.stIInternetGatewayClient.STATUS_STOPPED) {
+          that._igs.removeStatusListener(listener);
+          that._stopServiceFinish(aError, aErrorMessage);
+        }
+      },
+      onError: function (aError, aErrorMessage) {
+      },
+      onNewExternalIpAddress: function (aIpAddress) {
+      },
+      onDebugMessage: function (aErrorMessage) {
+      }
+    };
+    this._igc.addStatusListener(listener);
+    this._igc.stop();
+  }
+}
+
+stSyrinxTapeService.prototype._stopServiceFinished =
+function stSyrinxTapeService__stopServiceFinished(aError, aErrorMessage)
+{
+  this._error = aError;
+  this._errorMessage = aErrorMessage;
+  this._statusChange(Ci.stISyrinxTapeService.STATUS_STOPPED);
+
+  if (this._startPending) {
+    this._startPending = false;
+    this._startService();
+  }
 }
 
 stSyrinxTapeService.prototype._formatPropertyValue =
@@ -392,6 +537,91 @@ function stSyrinxTapeService__write404(aRequest, aResponse, aMessage)
   aResponse.write(s);
 }
 
+// stISyrinxTapeService
+stSyrinxTapeService.prototype.setConfiguration =
+function stSyrinxTapeService_setConfiguration(aConfiguration)
+{
+  var config = this._getConfiguration();
+  if (config.gatewayEnabled == aConfiguration.gatewayEnabled &&
+      config.internalPort == aConfiguration.internalPort &&
+      config.externalPort == aConfiguration.externalPort) {
+    return;
+  }
+
+  this._pref.setBoolPref("gatewayenabled", aConfiguration.gatewayEnabled);
+  this._pref.setIntPref("internalport", aConfiguration.internalPort);
+  this._pref.setIntPref("externalport", aConfiguration.externalPort);
+}
+
+stSyrinxTapeService.prototype.getConfiguration =
+function stSyrinxTapeService_getConfiguration()
+{
+  var config;
+  try {
+    config = {
+      gatewayEnabled: this._pref.getBoolPref("gatewayenabled"),
+      internalPort: this._pref.getIntPref("internalport"),
+      externalPort: this._pref.getIntPref("externalport")
+    };
+  }
+  catch (ignore) {
+    config = {
+      gatewayEnabled: true,
+      internalPort: 42000,
+      externalPort: 42000
+    };
+  }
+  return config;
+}
+
+stSyrinxTapeService.prototype.addStatusListener =
+function stSyrinxTapeService_addStatusListenerr(aListener)
+{
+  if (this._statusListeners.indexOf(aListener) < 0) {
+    this._statusListeners.push(aListener);
+  }
+}
+
+stSyrinxTapeService.prototype.removeStatusListener =
+function stSyrinxTapeService_removeStatusListener(aListener)
+{
+  this._statusListeners.filter(function(e) {
+    return aListener != e;
+  });
+}
+
+stSyrinxTapeService.prototype.start =
+function stSyrinxTapeService_start()
+{
+  if (this._status == Ci.stISyrinxTapeService.STATUS_READY ||
+      this._status == Ci.stISyrinxTapeService.STATUS_STARTING) {
+    return;
+  }
+
+  if (this._status == Ci.stISyrinxTapeService.STATUS_STOPPING) {
+    this._startPending = true;
+    return;
+  }
+
+  this._startService();
+}
+
+stSyrinxTapeService.prototype.stop =
+function stSyrinxTapeService_stop()
+{
+  if (this._status == Ci.stISyrinxTapeService.STATUS_STOPPED ||
+      this._status == Ci.stISyrinxTapeService.STATUS_STOPPING) {
+    return;
+  }
+
+  if (this._status == Ci.stISyrinxTapeService.STATUS_STARTING) {
+    this._stopPending = true;
+    return;
+  }
+
+  this._stopService();
+}
+
 // stIHttpRequestHandler
 stSyrinxTapeService.prototype.handle =
 function stSyrinxTapeService_handle(aRequest, aResponse)
@@ -446,6 +676,25 @@ function stSyrinxTapeService_handle(aRequest, aResponse)
   }
 
   this._write404(aRequest, aResponse, "Nothing to see here, move along.");
+}
+
+// stIPortMappingListener
+stSyrinxTapeService.prototype.onAdded =
+function stSyrinxTapeService_onAdded(aIpAddress, aInternal, aExternal)
+{
+}
+
+stSyrinxTapeService.prototype.onRemoved =
+function stSyrinxTapeService_onRemoved(aInternal)
+{
+}
+
+stSyrinxTapeService.prototype.onError =
+function stSyrinxTapeService_onError(aInternal,
+                                     aExternal,
+                                     aErrorCode,
+                                     aErrorDescription)
+{
 }
 
 // nsIObserver
