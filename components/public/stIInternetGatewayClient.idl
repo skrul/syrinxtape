@@ -38,6 +38,8 @@ interface stIInternetGatewayClient : nsISupports
   const unsigned long ERROR_NO_GATEWAY_FOUND = 1;
   const unsigned long ERROR_OTHER = 2;
 
+  readonly attribute unsigned long status;
+
   void start();
   void stop();
 

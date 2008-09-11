@@ -24,7 +24,6 @@ const RE_XMLSTANZA = /^<\?xml\s+version\s*=\s*(["'])[^\1]+\1[^?]*\?>/; //" (to f
 
 const nsdevice = new Namespace("urn:schemas-upnp-org:device-1-0");
 const nsenvelope = new Namespace("http://schemas.xmlsoap.org/soap/envelope/");
-const nswanip = new Namespace("urn:schemas-upnp-org:service:WANIPConnection:1");
 const nscontrol = new Namespace("urn:schemas-upnp-org:control-1-0");
 
 function TRACE(s) {
@@ -43,13 +42,15 @@ function stInternetGatewayClient() {
 
   this._status = Ci.stIInternetGatewayClient.STATUS_STOPPED;
   this._statusListeners = [];
+
   this._pendingPortMappings = [];
   this._portMappings = [];
+
   this._gateway = null;
   this._device = null;
   this._urlBase = null;
   this._controlUrl = null;
-  this._wanServiceType = null;
+  this._serviceType = null;
   this._internalIpAddress = null;
   this._externalIpAddress = null;
 }
@@ -98,17 +99,12 @@ function stInternetGatewayClient__discover()
   this._nu.sendUdpMulticast(UPNP_HOST, UPNP_PORT, 500, b.length, b, {
     gateway: null,
     receive: function (length, receive) {
-      try {
-        if (!this.gateway) {
-          var message = BYTES_TO_STRING(receive);
-          var a = /^LOCATION: (.*)$/m.exec(message);
-          if (a) {
-            this.gateway = a[1];
-          }
+      if (!this.gateway) {
+        var message = BYTES_TO_STRING(receive);
+        var a = /^LOCATION: (.*)$/m.exec(message);
+        if (a) {
+          this.gateway = a[1];
         }
-      }
-      catch (e) {
-        this._refreshError(e);
       }
     },
     done: function(result) {
@@ -156,9 +152,7 @@ function stInternetGatewayClient__updateDevice()
     }
 
     this._device = xml;
-    this._urlBase = this._ios.newURI(xml.nsdevice::URLBase.text(),
-                                     null,
-                                     null);
+    this._urlBase = this._ios.newURI(xml.nsdevice::URLBase.text(), null, null);
 
     // Get the wan service type
     var service = xml..nsdevice::service.(nsdevice::serviceType == URN_WANIP);
@@ -226,7 +220,7 @@ function stInternetGatewayClient__updateExternalIpAddress()
   var body = <m:GetExternalIPAddress xmlns:m={this._serviceType}/>;
   var action = "GetExternalIPAddress";
 
-  this._sendSoap(this._controlUrl, action, body, function (xml, errorCode, errorDesc) {
+  this._sendSoap(action, body, function (xml, errorCode, errorDesc) {
     if (this._status == Ci.stIInternetGatewayClient.STATUS_STOPPING) {
       this._stop();
       return;
@@ -356,7 +350,7 @@ function stInternetGatewayClient__deleteMappings(aMappings, aCallback)
     </m:DeletePortMapping>;
   var action = "DeletePortMapping";
 
-  this._sendSoap(this._controlUrl, action, body, function (xml, errorCode, errorDesc) {
+  this._sendSoap(action, body, function (xml, errorCode, errorDesc) {
     // Don't really care if this fails
     if (errorCode) {
       Cu.reportError("delete error: " + errorCode + " " + errorDesc);
@@ -390,7 +384,8 @@ function stInternetGatewayClient__processPendingPortMappings()
 }
 
 stInternetGatewayClient.prototype._getPortMappingByExternal =
-function stInternetGatewayClient__getPortMappingByExternal(aExternal, aCallback)
+function stInternetGatewayClient__getPortMappingByExternal(aExternal,
+                                                           aCallback)
 {
   this._debugMessage("getPortMappingByExternal");
 
@@ -402,7 +397,7 @@ function stInternetGatewayClient__getPortMappingByExternal(aExternal, aCallback)
     </m:GetSpecificPortMappingEntry>;
   var action = "GetSpecificPortMappingEntry";
 
-  this._sendSoap(this._controlUrl, action, body, function (xml, errorCode, errorDesc) {
+  this._sendSoap(action, body, function (xml, errorCode, errorDesc) {
     try {
       if (errorCode) {
         aCallback.apply(this, [xml, errorCode, errorDesc]);
@@ -435,7 +430,7 @@ function stInternetGatewayClient__getPortMappingByIndex(aIndex, aCallback)
     </m:GetGenericPortMappingEntry>;
   var action = "GetGenericPortMappingEntry";
 
-  this._sendSoap(this._controlUrl, action, body, function (xml, errorCode, errorDesc) {
+  this._sendSoap(action, body, function (xml, errorCode, errorDesc) {
     try {
       if (errorCode) {
         aCallback.apply(this, [xml, errorCode, errorDesc]);
@@ -524,12 +519,12 @@ function stInternetGatewayClient__send(aUrl, aMethod, aHeaders, aBody, aCallback
 }
 
 stInternetGatewayClient.prototype._sendSoap =
-function stInternetGatewayClient__sendSoap(aPath, aAction, aXmlBody, aCallback)
+function stInternetGatewayClient__sendSoap(aAction, aXmlBody, aCallback)
 {
   var headers = {
     SOAPAction: this._serviceType + "#" + aAction
   };
-  var url = this._urlBase.spec + aPath;
+  var url = this._urlBase.spec + this._controlUrl;
 
   var e =
     <s:Envelope
@@ -656,6 +651,12 @@ function stInternetGatewayClient__stop()
 }
 
 // stIInternetGatewayClientnternetGatewayClient
+stInternetGatewayClient.prototype.__defineGetter__("status",
+function stInternetGatewayClient_get_status()
+{
+  return this._status;
+});
+
 stInternetGatewayClient.prototype.start =
 function stInternetGatewayClient_start()
 {
@@ -731,7 +732,7 @@ function stInternetGatewayClient_addPortMapping(aInternal, aExternal, aListener)
     </m:AddPortMapping>;
   var action = "AddPortMapping";
 
-  this._sendSoap(this._controlUrl, action, body, function (xml, errorCode, errorDesc) {
+  this._sendSoap(action, body, function (xml, errorCode, errorDesc) {
     try {
       if (errorCode) {
         this._addPortMappingError(aListener,
