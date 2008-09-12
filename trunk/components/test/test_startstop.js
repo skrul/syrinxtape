@@ -11,9 +11,23 @@ function runTest () {
 
   var st = Cc["@skrul.com/syrinxtape/service;1"].getService(Ci.stISyrinxTapeService);
 
+  st.setConfiguration({
+    gatewayEnabled: true,
+    internalPort: 8080,
+    externalPort: 9090
+  });
+  var timer;
+
   var listener = {
     onStatus: function (aStatus, aError) {
-      log("onStatus " + aStatus + " " + aError);
+      log("onStatus " + aStatus + " " + aError + " " + st.errorMessage);
+      if (aStatus == Ci.stISyrinxTapeService.STATUS_READY) {
+        timer = Cc["@mozilla.org/timer;1"].createInstance(Ci.nsITimer);
+        timer.initWithCallback(function () {
+          log("stopping...");
+          st.stop();
+        }, 5000, Ci.nsITimer.TYPE_ONE_SHOT);
+      }
     },
     onNetworkUpdated: function () {
       log("onNetworkUpdated");
@@ -21,6 +35,11 @@ function runTest () {
   };
 
   st.addStatusListener(listener);
+
+  st.addDebugListener(function (aMessage) {
+    log("debug message " + aMessage);
+  });
+
   st.start();
 
   var tm = Cc["@mozilla.org/thread-manager;1"].getService(Ci.nsIThreadManager);

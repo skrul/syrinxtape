@@ -485,7 +485,7 @@ function stInternetGatewayClient__getAllMappings(aIndex, aMappings, aCallback)
 stInternetGatewayClient.prototype._send =
 function stInternetGatewayClient__send(aUrl, aMethod, aHeaders, aBody, aCallback)
 {
-  this._debugMessage("send: \n" + [aUrl, aMethod, aHeaders, aBody].join("\n"));
+//  this._debugMessage("send: \n" + [aUrl, aMethod, aHeaders, aBody].join("\n"));
 
   var xhr = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"]
               .createInstance(Ci.nsIXMLHttpRequest);
@@ -502,7 +502,7 @@ function stInternetGatewayClient__send(aUrl, aMethod, aHeaders, aBody, aCallback
     aCallback.apply(that, [event, null]);
   }
   xhr.onload = function (event) {
-    that._debugMessage("receive: \n" + [event.target.responseText].join("\n"));
+//    that._debugMessage("receive: \n" + [event.target.responseText].join("\n"));
 
     var xml = null;
     try {
