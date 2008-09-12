@@ -12,7 +12,13 @@ interface stIConfiguration : nsISupports
 {
   readonly attribute boolean gatewayEnabled;
   readonly attribute unsigned long internalPort;
-  readonly attribute unsigned long extermalPort;
+  readonly attribute unsigned long externalPort;
+};
+
+[scriptable, function, uuid(236240f3-0bb8-4da0-ab7f-ec037295c028)]
+interface stIDebugListener : nsISupports
+{
+  void onMessage(in AString aMessage);
 };
 
 [scriptable, uuid(f92f0199-6e2d-4f65-bac9-8e9447213ac1)]
@@ -46,8 +52,14 @@ interface stISyrinxTapeService : nsISupports
   void addStatusListener(in stIStatusListener aListener);
   void removeStatusListener(in stIStatusListener aListener);
 
+  void addDebugListener(in stIDebugListener aListener);
+  void removeDebugListener(in stIDebugListener aListener);
+
   void publish(in sbIMediaList aMediaList);
   void unpublish(in sbIMediaList aMediaList);
 
   AString getUrl(in sbIMediaList aMediaList);
+
+  void start();
+  void stop();
 };
