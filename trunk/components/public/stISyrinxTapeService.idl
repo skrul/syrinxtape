@@ -37,8 +37,8 @@ interface stISyrinxTapeService : nsISupports
   const unsigned long STATUS_STOPPING = 3;
 
   const unsigned long ERROR_NONE = 0;
-  const unsigned long ERROR_LOCAL_PORT = 1;
-  const unsigned long ERROR_REMOET_PORT = 2;
+  const unsigned long ERROR_INTERNAL_PORT = 1;
+  const unsigned long ERROR_EXTERNAL_PORT = 2;
   const unsigned long ERROR_OTHER = 3;
 
   readonly attribute unsigned long status;

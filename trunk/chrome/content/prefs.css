@@ -1,0 +1,13 @@
+/*
+ * Copyright (C) 2008 by Steve Krulewitz <skrulx@gmail.com>
+ * Licensed under GPLv2 or later, see file LICENSE in the xpi for details.
+ */
+#throbber {
+  -moz-margin-start: 5px;
+  width: 16px;
+  height: 16px;
+}
+
+.throbber-throbbing {
+  list-style-image: url("chrome://songbird/skin/base-elements/icon-loading.png");
+}

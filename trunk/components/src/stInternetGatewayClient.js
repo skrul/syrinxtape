@@ -355,6 +355,12 @@ function stInternetGatewayClient__deleteMappings(aMappings, aCallback)
     if (errorCode) {
       Cu.reportError("delete error: " + errorCode + " " + errorDesc);
     }
+
+    // Remove removed mapping from mapping list
+    this._portMappings = this._portMappings.filter(function (m) {
+      return m.internal != mapping.internal;
+    });
+
     this._deleteMappings(aMappings, aCallback);
   });
 }
@@ -700,7 +706,7 @@ function stInternetGatewayClient_addStatusListenerr(aListener)
 stInternetGatewayClient.prototype.removeStatusListener =
 function stInternetGatewayClient_removeStatusListener(aListener)
 {
-  this._statusListeners.filter(function(e) {
+  this._statusListeners = this._statusListeners.filter(function(e) {
     return aListener != e;
   });
 }
