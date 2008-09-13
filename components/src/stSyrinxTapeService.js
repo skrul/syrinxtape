@@ -30,6 +30,13 @@ const CONTENT_TYPES = {
   mp3: "audio/mpeg"
 }
 
+const STATUS_STRINGS = {
+  0: "stopped",
+  1: "starting",
+  2: "ready",
+  3: "stopping"
+}
+
 function TRACE(s) {
   dump("stSyrinxTapeService: " + new String(s) + "\n");
 }
@@ -58,7 +65,7 @@ function stSyrinxTapeService() {
                 .createInstance(Ci.stIInternetGatewayClient);
   this._igc.addStatusListener(this);
 
-  this._status = Ci.stISyrinxTapeService.STATE_STOPPED;
+  this._status = Ci.stISyrinxTapeService.STATUS_STOPPED;
   this._statusListeners = [];
   this._debugListeners = [];
 
@@ -119,10 +126,17 @@ stSyrinxTapeService.prototype._statusChange =
 function stSyrinxTapeService__statusChange(aStatus)
 {
   if (this._status != aStatus) {
+    this._notifyDebug("status change " +
+                      STATUS_STRINGS[this._status] + " -> " +
+                      STATUS_STRINGS[aStatus] + " " +
+                      this._error + " " +
+                      this._errorMessage);
+
     this._status = aStatus;
     this._notify(function(l) {
       l.onStatus(aStatus, this._error);
     });
+
   }
 }
 
@@ -174,7 +188,7 @@ function stSyrinxTapeService__getMediaListByPath(aPath)
   var l = this._lm.mainLibrary;
   l.enumerateItemsByProperties(pa,
                                listener,
-                               Ci.stIMediaList.ENUMERATIONTYPE_SNAPSHOT);
+                               Ci.sbIMediaList.ENUMERATIONTYPE_SNAPSHOT);
 
   return listener.item;
 }
@@ -291,7 +305,7 @@ function stSyrinxTapeService__startup()
   this._httpServer.registerPathHandler("/", this);
   this._started = true;
 
-  TRACE(this._httpServer);
+  this._startService();
 }
 
 stSyrinxTapeService.prototype._shutdown =
@@ -319,8 +333,10 @@ function stSyrinxTapeService__startService()
       this._httpServer.start(config.internalPort);
     }
     catch (e) {
-      this._stopService(Ci.stISyrinxTapeService.ERROR_LOCAL_PORT, e);
+      this._stopService(Ci.stISyrinxTapeService.ERROR_INTERNAL_PORT, e);
+      return;
     }
+    this._httpServerStarted = true;
 
     if (!config.gatewayEnabled) {
       this._startServiceFinished();
@@ -619,7 +635,7 @@ function stSyrinxTapeService_addStatusListenerr(aListener)
 stSyrinxTapeService.prototype.removeStatusListener =
 function stSyrinxTapeService_removeStatusListener(aListener)
 {
-  this._statusListeners.filter(function(e) {
+  this._statusListeners = this._statusListeners.filter(function(e) {
     return aListener != e;
   });
 }
@@ -635,7 +651,7 @@ function stSyrinxTapeService_addDebugListenerr(aListener)
 stSyrinxTapeService.prototype.removeDebugListener =
 function stSyrinxTapeService_removeDebugListener(aListener)
 {
-  this._debugListeners.filter(function(e) {
+  this._debugListeners = this._debugListeners.filter(function(e) {
     return aListener != e;
   });
 }
@@ -778,6 +794,15 @@ function stSyrinxTapeService_onError(aInternal,
                                      aErrorCode,
                                      aErrorDescription)
 {
+  if (this._status == Ci.stISyrinxTapeService.STATUS_STARTING) {
+    this._stopService(Ci.stISyrinxTapeService.ERROR_EXTERNAL_PORT,
+                      aErrorCode + ": " + aErrorDescription);
+  }
+  else {
+    Cu.reportError("unexpected port error: " +
+                   aInternal + " " + aExternal + " " +
+                   aErrorCode + " " + aErrorDescription);
+  }
 }
 
 // nsIObserver
@@ -795,4 +820,3 @@ function stSyrinxTapeService_observe(aSubject, aTopic, aData)
 function NSGetModule(compMgr, fileSpec) {
   return XPCOMUtils.generateModule([stSyrinxTapeService]);
 }
-
