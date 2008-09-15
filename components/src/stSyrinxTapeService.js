@@ -454,6 +454,14 @@ function stSyrinxTapeService__formatPropertyValue(aId, aValue)
   }
 }
 
+stSyrinxTapeService.prototype._incrementProperty =
+function stSyrinxTapeService__incrementProperty(aMediaItem, aProperty)
+{
+  var n = parseInt(aMediaItem.getProperty(aProperty));
+  n = isNaN(n) ? 1 : ++n;
+  aMediaItem.setProperty(aProperty, n);
+}
+
 stSyrinxTapeService.prototype._writeResponseFromURI =
 function stSyrinxTapeService__writeResponseFromURI(aRequest, aResponse, aURI)
 {
@@ -781,6 +789,7 @@ function stSyrinxTapeService_handle(aRequest, aResponse)
     }
     if (item) {
       this._writeTrack(aRequest, aResponse, item);
+      this._incrementProperty(list, ST_NS + "plays");
     }
     else {
       this._write404(aRequest, aResponse, "Track not found");
@@ -808,6 +817,7 @@ function stSyrinxTapeService_handle(aRequest, aResponse)
     if (list) {
       TRACE("found media list " + list);
       this._writeMediaList(aRequest, aResponse, list);
+      this._incrementProperty(list, ST_NS + "views");
     }
     else {
       this._write404(aRequest, aResponse, "Could not find tape named '" + path + "'");
