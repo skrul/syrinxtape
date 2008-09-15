@@ -12,6 +12,21 @@ Licensed under GPLv2 or later, see file LICENSE in the xpi for details.
     src="chrome://syrinxtape/content/overlay.js"
   />
   <page>
-    <hbox><label value="HEllo world!!!"/></hbox>
+    <hbox id="syrinxtape-box">
+      <checkbox
+        id="syrinxtape-publish"
+        label="Publish this playlist"
+        oncommand="SyrinxTapeController.publish(this.checked)"
+      />
+      <hbox flex="1" id="syrinxtape-urlbox">
+        <spacer flex="1"/>
+        <label value="Url:"/>
+        <textbox
+          id="syrinxtape-url"
+          readonly="true"
+          size="30"
+        />
+      </hbox>
+    </hbox>
   </page>
 </overlay>

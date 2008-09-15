@@ -57,8 +57,9 @@ interface stISyrinxTapeService : nsISupports
 
   void publish(in sbIMediaList aMediaList);
   void unpublish(in sbIMediaList aMediaList);
+  boolean isPublished(in sbIMediaList aMediaList);
 
-  AString getUrl(in sbIMediaList aMediaList);
+  nsIURI getUrl(in sbIMediaList aMediaList);
 
   void start();
   void stop();
