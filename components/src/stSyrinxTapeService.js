@@ -78,6 +78,10 @@ function stSyrinxTapeService() {
   this._dataDir = null;
   this._httpServer = null;
 
+  this._externalIpAddress = null;
+  this._internalPort = null;
+  this._externalPort = null;
+
   var obs = Cc["@mozilla.org/observer-service;1"]
               .getService(Ci.nsIObserverService);
   obs.addObserver(this, SB_LIBRARY_MANAGER_READY_TOPIC, false);
@@ -535,6 +539,12 @@ function stSyrinxTapeService__appendElement(aNode, aNamespace, aName, aData)
 {
   var document = aNode.ownerDocument;
   var e;
+
+  if (aName == "") {
+    Cu.reportError("Warning: appendElement with empty node name");
+    return;
+  }
+
   if (aNamespace) {
     e = document.createElementNS(aNamespace, aName);
   }
@@ -693,6 +703,43 @@ function stSyrinxTapeService_stop()
   this._stopService();
 }
 
+stSyrinxTapeService.prototype.publish =
+function stSyrinxTapeService_publish(aMediaList)
+{
+  aMediaList.setProperty(ST_NS + "isPublished", "1");
+}
+
+stSyrinxTapeService.prototype.unpublish =
+function stSyrinxTapeService_unpublish(aMediaList)
+{
+  aMediaList.setProperty(ST_NS + "isPublished", "0");
+}
+
+stSyrinxTapeService.prototype.isPublished =
+function stSyrinxTapeService_isPublished(aMediaList)
+{
+  return aMediaList.getProperty(ST_NS + "isPublished") == "1";
+}
+
+stSyrinxTapeService.prototype.getUrl =
+function stSyrinxTapeService_getUrl(aMediaList)
+{
+  if (this.isPublished(aMediaList)) {
+    var name = aMediaList.getProperty(SBProperties.mediaListName);
+
+    var ios = Cc["@mozilla.org/network/io-service;1"]
+                .getService(Ci.nsIIOService);
+    var url = ios.newURI("http://" + this._externalIpAddress +
+                         ":" + this._externalPort +
+                         "/" + encodeURIComponent(name),
+                         null,
+                         null);
+    return url;
+  }
+
+  return null;
+}
+
 // stIInternetGatewayServiceStatusListener
 stSyrinxTapeService.prototype.onStatusChange =
 function stSyrinxTapeService_onStatusChange(aStatus)
@@ -776,6 +823,10 @@ stSyrinxTapeService.prototype.onAdded =
 function stSyrinxTapeService_onAdded(aIpAddress, aInternal, aExternal)
 {
   if (this._status == Ci.stISyrinxTapeService.STATUS_STARTING) {
+    this._externalIpAddress = aIpAddress;
+    this._internalPort = aInternal;
+    this._externalPort = aExternal;
+
     this._startServiceFinished();
   }
   else {

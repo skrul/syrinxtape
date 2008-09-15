@@ -21,6 +21,7 @@
     <em:creator>Steve Krulewitz</em:creator>
     <em:homepageURL>http://www.songbirdnest.com/</em:homepageURL>
     <em:version>0.0.1</em:version>
+    <em:optionsURL>chrome://syrinxtape/content/prefs.xul</em:optionsURL>
 
   </Description>
 
