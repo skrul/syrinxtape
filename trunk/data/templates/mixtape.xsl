@@ -32,7 +32,7 @@ if (!navigator.userAgent.match(/iPhone|iPod/i)) {
     type: "xml",
     shuffle: "false",
     repeat: "list",
-    file: "/playlist2?view=xspf"
+    file: "<xsl:value-of select="/list/@path"/>?view=xspf"
   }
   var params = {
     allowscriptaccess: "always"
@@ -51,7 +51,7 @@ if (!navigator.userAgent.match(/iPhone|iPod/i)) {
 <object width="0" height="0" type="application/x-shockwave-flash" id="openplayer"
 name="openplayer" class="flash_player" data="/__res__/mediaplayer.swf" 
 style="visibility: visible;"><param name="allowscriptaccess" value="always"/>
-<param name="flashvars" value="type=xml&amp;shuffle=false&amp;repeat=list&amp;file=/playlist2?view=xspf"/>
+<param name="flashvars" value="type=xml&amp;shuffle=false&amp;repeat=list&amp;file={/list/@path}?view=xspf"/>
 </object>
 
   <div class="container">

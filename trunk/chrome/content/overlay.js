@@ -19,6 +19,15 @@ var SyrinxTapeController = {
 
     document.getElementById("syrinxtape-urlbox").hidden = !publish.checked;
 
+    function orZero(v) {
+      return v ? v : "0";
+    }
+
+    document.getElementById("syrinxtape-views").value =
+      orZero(this._list.getProperty(this._ns + "views"));
+    document.getElementById("syrinxtape-plays").value =
+      orZero(this._list.getProperty(this._ns + "plays"));
+
     var url = this._st.getUrl(list);
     sturl.value = url ? url.spec : "not available";
   },
@@ -70,7 +79,11 @@ var SyrinxTapeController = {
         l.addListener(this,
                       false,
                       Ci.sbIMediaList.LISTENER_FLAGS_ITEMUPDATED,
-                      SBProperties.createArray([[SBProperties.mediaListName, null]]));
+                      SBProperties.createArray([
+                        [SBProperties.mediaListName, null],
+                        [this._ns + "views", null],
+                        [this._ns + "plays", null]
+                      ]));
         this._updateUi();
       }
       else {
