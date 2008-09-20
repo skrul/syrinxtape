@@ -50,7 +50,7 @@
   <caption label="Network Status"/>
   <hbox>
     <label value="SyrinxTape service"/>
-    <label id="syrinxtape-status"/>
+    <label id="status"/>
   </hbox>
   <hbox>
     <label value="Local HTTP server"/>

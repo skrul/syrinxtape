@@ -15,6 +15,9 @@ function runTest () {
   igs.addStatusListener({
     onStatusChange: function (aStatus) {
       log("onStausChange " + aStatus);
+      if (aStatus == Ci.stIInternetGatewayClient.STATUS_STOPPED) {
+        igs.stop();
+      }
     },
     onError: function (aError, aMessage) {
       log("onError " + aError + " " + aMessage);
@@ -27,7 +30,7 @@ function runTest () {
     }
 
   });
-
+    /*
   igs.addPortMapping(80, 10003, {
     onAdded: function (aIpAddress, aInternal, aExternal) {
       log("onAdded " + aIpAddress + " " + aInternal + " " + aExternal);
@@ -40,7 +43,7 @@ function runTest () {
       log("onError " + aInternal + " " + aExternal + " " + aErrorCode + " " + aErrorDescription);
     }
   });
-
+*/
   igs.start();
 
   while (true) {
