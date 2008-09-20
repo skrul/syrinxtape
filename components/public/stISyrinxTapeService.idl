@@ -24,7 +24,7 @@ interface stIDebugListener : nsISupports
 [scriptable, uuid(f92f0199-6e2d-4f65-bac9-8e9447213ac1)]
 interface stIStatusListener : nsISupports
 {
-  void onStatus(in unsigned long aStatus, in unsigned long aError);
+  void onStatus(in unsigned long aStatus);
   void onNetworkUpdated();
 };
 
@@ -43,8 +43,8 @@ interface stISyrinxTapeService : nsISupports
 
   readonly attribute unsigned long status;
 
-  readonly attribute AString errorMessage;
-  readonly attribute unsigned long error;
+  readonly attribute AString lastErrorMessage;
+  readonly attribute unsigned long lastError;
 
   void setConfiguration(in stIConfiguration aConfiguration);
   stIConfiguration getConfiguration();

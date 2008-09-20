@@ -53,7 +53,7 @@ const Cu = Components.utils;
 const CC = Components.Constructor;
 
 /** True if debugging output is enabled, false otherwise. */
-var DEBUG = true; // non-const *only* so tweakable in server tests
+var DEBUG = false; // non-const *only* so tweakable in server tests
 
 var gGlobalObject = this;
 

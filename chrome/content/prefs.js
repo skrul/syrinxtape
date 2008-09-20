@@ -6,6 +6,13 @@ const Cc = Components.classes;
 const Ci = Components.interfaces;
 const Cr = Components.results;
 
+const STATUS_STRINGS = {
+  0: "Stopped",
+  1: "Starting",
+  2: "Ready",
+  3: "Stopping"
+}
+
 function $(id) {
   return document.getElementById(id);
 }
@@ -31,6 +38,12 @@ var PrefsController = {
     else {
       $("throbber").className = "throbber-throbbing";
     }
+
+    var status = STATUS_STRINGS[this._st.status];
+    if (this._st.lastError != Ci.stISyrinxTapeService.ERROR_NONE) {
+      status += " (" + this._st.lastErrorMessage + ")";
+    }
+    $("status").value = status;
   },
 
   savePrefs: function PrefsController_savePrefs() {

@@ -37,11 +37,13 @@ function stInternetGatewayClient() {
   this._nu = Cc["@skrul.com/syrinxtape/net-utils;1"]
                 .createInstance(Ci.stINetUtils);
 
-  this._started = false;
-  this._starting = false;
 
   this._status = Ci.stIInternetGatewayClient.STATUS_STOPPED;
   this._statusListeners = [];
+
+  this._refreshPending = false;
+  this._stopPending = false;
+  this._firstRefresh = true;
 
   this._pendingPortMappings = [];
   this._portMappings = [];
@@ -67,6 +69,11 @@ stInternetGatewayClient.prototype._refresh =
 function stInternetGatewayClient__refresh()
 {
   if (this._status == Ci.stIInternetGatewayClient.STATUS_REFRESHING) {
+    return;
+  }
+
+  if (this._status == Ci.stIInternetGatewayClient.STATUS_STOPPING) {
+    this._refreshPending = true;
     return;
   }
 
@@ -108,12 +115,6 @@ function stInternetGatewayClient__discover()
       }
     },
     done: function(result) {
-
-      if (that._status == Ci.stIInternetGatewayClient.STATUS_STOPPING) {
-        that._stop();
-        return;
-      }
-
       try {
         if (!this.gateway) {
           that._refreshError(null,
@@ -139,11 +140,6 @@ function stInternetGatewayClient__updateDevice()
   this._debugMessage("Updating gateway device");
 
   this._send(this._gateway, "GET", null, null, function (event, xml) {
-    if (this._status == Ci.stIInternetGatewayClient.STATUS_STOPPING) {
-      this._stop();
-      return;
-    }
-
     if (!xml) {
       this._refreshError(null,
                          Ci.stIInternetGatewayClient.ERROR_NETWORK,
@@ -191,11 +187,6 @@ function stInternetGatewayClient__updateLocalIpAddress()
 
   var that = this;
   this._nu.getLocalIpAddress(host, port, 1000, function (aResult, aIpAddress) {
-    if (that._status == Ci.stIInternetGatewayClient.STATUS_STOPPING) {
-      that._stop();
-      return;
-    }
-
     try {
       if (aResult != Cr.NS_OK) {
         that._refreshError(null, aResult, "Unable to get local ip address");
@@ -221,11 +212,6 @@ function stInternetGatewayClient__updateExternalIpAddress()
   var action = "GetExternalIPAddress";
 
   this._sendSoap(action, body, function (xml, errorCode, errorDesc) {
-    if (this._status == Ci.stIInternetGatewayClient.STATUS_STOPPING) {
-      this._stop();
-      return;
-    }
-
     try {
       if (errorCode) {
         this._refreshError(null,
@@ -236,12 +222,9 @@ function stInternetGatewayClient__updateExternalIpAddress()
       this._externalIpAddress = xml..NewExternalIPAddress;
       this._debugMessage("externalIpAddress = " + this._externalIpAddress);
 
-      if (this._starting) {
+      if (this._firstRefresh) {
+        this._firstRefresh = false;
         this._deleteAllMappings(function () {
-          if (this._status == Ci.stIInternetGatewayClient.STATUS_STOPPING) {
-            this._stop();
-            return;
-          }
           this._ensurePortMappings();
         });
       }
@@ -269,11 +252,6 @@ function stInternetGatewayClient__ensurePortMappings(aMappings)
     var mapping = aMappings.shift();
 
     this._getPortMappingByExternal(mapping.external, function (xml, errorCode, errorDesc) {
-      if (this._status == Ci.stIInternetGatewayClient.STATUS_STOPPING) {
-        this._stop();
-        return;
-      }
-
       try {
         if (xml..NewInternalPort == mapping.internal &&
             xml..NewInternalClient == this._internalIpAddress &&
@@ -370,13 +348,13 @@ function stInternetGatewayClient__finishRefresh()
 {
   this._debugMessage("finishRefresh");
 
-  if (this._status == Ci.stIInternetGatewayClient.STATUS_STOPPING) {
+  this._statusChange(Ci.stIInternetGatewayClient.STATUS_READY);
+  if (this._stopPending) {
+    this._stopPending = false;
     this._stop();
     return;
   }
 
-  this._statusChange(Ci.stIInternetGatewayClient.STATUS_READY);
-  this._starting = false;
   this._processPendingPortMappings();
 }
 
@@ -584,6 +562,8 @@ function stInternetGatewayClient__refreshError(aException, aError, aMessage)
   }
 
   this._error(aError, aMessage);
+  this._refreshPending = false;
+  this._stopPending = false;
   this._statusChange(Ci.stIInternetGatewayClient.STATUS_STOPPED);
 }
 
@@ -640,6 +620,7 @@ function stInternetGatewayClient__statusChange(aStatus)
 stInternetGatewayClient.prototype._error =
 function stInternetGatewayClient__error(aError, aMessage)
 {
+  this._debugMessage("error: " + aMessage + "(" + aError + ")");
   this._notifyStatus(function(l) {
     l.onError(aError, aMessage);
   });
@@ -650,9 +631,15 @@ function stInternetGatewayClient__stop()
 {
   this._debugMessage("stop");
 
+  this._statusChange(Ci.stIInternetGatewayClient.STATUS_STOPPING);
+
   this._deleteAllMappings(function() {
-    this._started = false;
     this._statusChange(Ci.stIInternetGatewayClient.STATUS_STOPPED);
+
+    if (this._refreshPending) {
+      this._refreshPending = false;
+      this._refresh();
+    }
   });
 }
 
@@ -666,27 +653,28 @@ function stInternetGatewayClient_get_status()
 stInternetGatewayClient.prototype.start =
 function stInternetGatewayClient_start()
 {
-  if (this._started) {
+  if (this._status == Ci.stIInternetGatewayClient.STATUS_REFRESHING ||
+      this._status == Ci.stIInternetGatewayClient.STATUS_READY) {
     return;
   }
 
-  this._started = true;
-  this._starting = true;
+  if (this._status == Ci.stIInternetGatewayClient.STATUS_STOPPING) {
+    this._refreshPending = true;
+    return;
+  }
+
   this._refresh();
 }
 
 stInternetGatewayClient.prototype.stop =
 function stInternetGatewayClient_stop()
 {
-  if (!this._started) {
+  if (this._status == Ci.stIInternetGatewayClient.STATUS_STOPPED ||
+      this._status == Ci.stIInternetGatewayClient.STATUS_STOPPING) {
     return;
   }
 
-  this._starting = false;
-  var status = this._status;
-  this._statusChange(Ci.stIInternetGatewayClient.STATUS_STOPPING);
-
-  if (status == Ci.stIInternetGatewayClient.STATUS_REFRESHING) {
+  if (this._status == Ci.stIInternetGatewayClient.STATUS_REFRESHING) {
     this._debugMessage("stop pending...");
     this._stopPending = true;
     return;
