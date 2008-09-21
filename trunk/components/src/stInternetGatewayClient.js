@@ -17,6 +17,13 @@ const NS_PROFILE_SHUTDOWN_OBSERVER_ID = "profile-before-change";
 const UPNP_HOST = "239.255.255.250";
 const UPNP_PORT = 1900;
 
+const DEVICES = [
+  "urn:schemas-upnp-org:device:InternetGatewayDevice:1",
+  "urn:schemas-upnp-org:service:WANIPConnection:1",
+  "urn:schemas-upnp-org:service:WANPPPConnection:1",
+  "upnp:rootdevice"
+];
+
 const URN_WANIP = "urn:schemas-upnp-org:service:WANIPConnection:1";
 const URN_WANPPP = "urn:schemas-upnp-org:service:WANPPPConnection:1";
 
@@ -79,7 +86,8 @@ function stInternetGatewayClient__refresh()
 
   try {
     this._statusChange(Ci.stIInternetGatewayClient.STATUS_REFRESHING);
-    this._discover();
+    var list = DEVICES.concat();
+    this._discover(list);
   }
   catch (e) {
     this._refreshError(e);
@@ -87,14 +95,16 @@ function stInternetGatewayClient__refresh()
 }
 
 stInternetGatewayClient.prototype._discover =
-function stInternetGatewayClient__discover()
+function stInternetGatewayClient__discover(aList)
 {
-  this._debugMessage("Starting discover...");
+  var device = aList.shift();
+
+  this._debugMessage("Starting discover, device = " + device);
 
   var a = [
     "M-SEARCH * HTTP/1.1",
     "HOST: " + UPNP_HOST + ":" + UPNP_PORT,
-    "ST: urn:schemas-upnp-org:device:InternetGatewayDevice:1",
+    "ST: " + device,
     "MAN: \"ssdp:discover\"",
     "MX: 3",
     "",
@@ -105,7 +115,7 @@ function stInternetGatewayClient__discover()
   this._debugMessage("upnp discovery, sending: " + BYTES_TO_STRING(b));
 
   var that = this;
-  this._nu.sendUdpMulticast(UPNP_HOST, UPNP_PORT, 5000, b.length, b, {
+  this._nu.sendUdpMulticast(UPNP_HOST, UPNP_PORT, 1000, b.length, b, {
     gateway: null,
     receive: function (length, receive) {
       that._debugMessage("multicast response: " + BYTES_TO_STRING(receive));
@@ -120,9 +130,15 @@ function stInternetGatewayClient__discover()
     done: function(result) {
       try {
         if (!this.gateway) {
-          that._refreshError(null,
-                             Ci.stIInternetGatewayClient.ERROR_NO_GATEWAY_FOUND,
-                             "No Internet Gatway Device found");
+          // If the list is empty, give up
+          if (aList.length == 0) {
+            that._refreshError(null,
+                               Ci.stIInternetGatewayClient.ERROR_NO_GATEWAY_FOUND,
+                               "No Internet Gatway Device found");
+          }
+          else {
+            that._discover(aList);
+          }
           return;
         }
 

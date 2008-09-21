@@ -26,7 +26,7 @@ function runTest () {
       log("onNewExternalIpAddress " + aIpAddress);
     },
     onDebugMessage: function (aMessage) {
-//      log("onDebugMessage " + aMessage);
+      log("onDebugMessage " + aMessage);
     }
 
   });
