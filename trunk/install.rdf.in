@@ -17,10 +17,10 @@
 
     <em:id>@EXTENSION_UUID@</em:id>
     <em:name>SyrinxTape</em:name>
-    <em:description>SyrinxTape for Songbird</em:description>
+    <em:description>Share playlists with your friends</em:description>
     <em:creator>Steve Krulewitz</em:creator>
-    <em:homepageURL>http://www.songbirdnest.com/</em:homepageURL>
-    <em:version>0.0.1</em:version>
+    <em:homepageURL>http://code.google.com/p/syrinxtape/</em:homepageURL>
+    <em:version>0.0.2</em:version>
     <em:optionsURL>chrome://syrinxtape/content/prefs.xul</em:optionsURL>
 
   </Description>
