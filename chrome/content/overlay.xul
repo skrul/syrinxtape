@@ -24,7 +24,7 @@ Licensed under GPLv2 or later, see file LICENSE in the xpi for details.
         <label id="syrinxtape-views"/>
         <label value="Plays:" />
         <label id="syrinxtape-plays"/>
-        <label value="Url:"/>
+        <label value="Link:"/>
         <textbox
           id="syrinxtape-url"
           readonly="true"

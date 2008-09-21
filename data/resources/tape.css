@@ -13,7 +13,7 @@ a:hover {text-decoration:underline;}
 .banner a{color:#fff;text-decoration:underline;}
 .flag h1{font-size:16px;font-weight:700;margin:10px 0 0;}
 .flag h2 {font-weight:400;}
-/*.flash_player {position:absolute;top:0;left:-5555px;overflow:hidden;}*/
+.flash_player {position:absolute;top:0;left:-5555px;overflow:hidden;}
 .footer {margin:20px;text-align:right;}
 .nav{position:absolute;right:45px;top:0;}
 .nav strong a{color:#fff;display:block;font-size:11px;padding:2px;}
