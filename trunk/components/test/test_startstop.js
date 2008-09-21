@@ -19,8 +19,8 @@ function runTest () {
   var timer;
 
   var listener = {
-    onStatus: function (aStatus, aError) {
-      log("onStatus " + aStatus + " " + aError + " " + st.errorMessage);
+    onStatus: function (aStatus) {
+      log("onStatus " + aStatus + " " + st.lastError + " " + st.lastErrorMessage);
       if (aStatus == Ci.stISyrinxTapeService.STATUS_READY) {
         timer = Cc["@mozilla.org/timer;1"].createInstance(Ci.nsITimer);
         timer.initWithCallback(function () {

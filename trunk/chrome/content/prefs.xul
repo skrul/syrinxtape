@@ -49,16 +49,8 @@
 <groupbox>
   <caption label="Network Status"/>
   <hbox>
-    <label value="SyrinxTape service"/>
+    <label value="SyrinxTape service:"/>
     <label id="status"/>
-  </hbox>
-  <hbox>
-    <label value="Local HTTP server"/>
-    <label id="local-status"/>
-  </hbox>
-  <hbox>
-    <label value="Port Mapping"/>
-    <label id="port-mapping-status"/>
   </hbox>
   <box>
     <button

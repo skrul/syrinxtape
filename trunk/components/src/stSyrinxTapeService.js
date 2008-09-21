@@ -616,7 +616,6 @@ function stSyrinxTapeService_get_status()
 stSyrinxTapeService.prototype.__defineGetter__("lastErrorMessage",
 function stSyrinxTapeService_get_lastErrorMessage()
 {
-  dump("#################### last error message " + this._lastErrorMessage + "\n");
   return this._lastErrorMessage;
 });
 
@@ -768,9 +767,9 @@ function stSyrinxTapeService_onStatusChange(aStatus)
 {
   switch(aStatus) {
 
-  case Ci.stIInternetGatewayService.STATUS_STOPPED:
+  case Ci.stIInternetGatewayClient.STATUS_STOPPED:
     if (this._status == Ci.stISyrinxTapeService.STATUS_STOPPING) {
-      // finished stopping
+      this._stopServiceFinished();
     }
     else {
       Cu.reportError("Unexpected STATUS_STOPPED from igc, stopping sts");
@@ -778,13 +777,13 @@ function stSyrinxTapeService_onStatusChange(aStatus)
     }
     break;
 
-  case Ci.stIInternetGatewayService.STATUS_REFRESHING:
+  case Ci.stIInternetGatewayClient.STATUS_REFRESHING:
     if (this._status != Ci.stISyrinxTapeService.STATUS_STARTING) {
       Cu.reportError("Unexpected STATUS_STARTING from igc");
     }
     break;
 
-  case Ci.stIInternetGatewayService.STATUS_READY:
+  case Ci.stIInternetGatewayClient.STATUS_READY:
     if (this._status == Ci.stISyrinxTapeService.STATUS_STARTING) {
       this._mapPort();
     }
@@ -793,7 +792,7 @@ function stSyrinxTapeService_onStatusChange(aStatus)
     }
     break;
 
-  case Ci.stIInternetGatewayService.STATUS_STOPPING:
+  case Ci.stIInternetGatewayClient.STATUS_STOPPING:
     if (this._status != Ci.stISyrinxTapeService.STATUS_STOPPING) {
       Cu.reportError("Unexpected STATUS_STOPPING from igc");
     }
@@ -807,6 +806,9 @@ function stSyrinxTapeService_onError(aError, aMessage)
 {
   this._lastError = Ci.stISyrinxTapeService.ERROR_EXTERNAL_PORT;
   this._lastErrorMessage = aMessage + " (" + aError + ")";
+
+  // If there is an error, stop
+  this._stopService();
 }
 
 stSyrinxTapeService.prototype.onNewExternalIpAddress =

@@ -250,6 +250,7 @@ style="visibility: visible;"><param name="allowscriptaccess" value="always"/>
       <xsl:text> - </xsl:text>
       <xsl:value-of select="sb:trackName"/>
     </div>
+    &#160;
     <div class="info">
       <div class="clock"></div> <strong><xsl:value-of select="sb:duration"/></strong>
     </div>
