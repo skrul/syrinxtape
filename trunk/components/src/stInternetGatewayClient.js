@@ -102,13 +102,13 @@ function stInternetGatewayClient__discover()
   ];
   var b = STRING_TO_BYTES(a.join("\r\n"));
 
-  this._debugMessage("upnp discovery, sending: " + b);
+  this._debugMessage("upnp discovery, sending: " + BYTES_TO_STRING(b));
 
   var that = this;
   this._nu.sendUdpMulticast(UPNP_HOST, UPNP_PORT, 5000, b.length, b, {
     gateway: null,
     receive: function (length, receive) {
-      that._debugMessage("multicast response: " + receive);
+      that._debugMessage("multicast response: " + BYTES_TO_STRING(receive));
       if (!this.gateway) {
         var message = BYTES_TO_STRING(receive);
         var a = /^LOCATION: (.*)$/m.exec(message);
