@@ -170,7 +170,7 @@ stUdpMulticastWorker::Run()
 
   while (PR_TRUE) {
     char buff[READ_BUFFER];
-    bzero(buff, READ_BUFFER);
+    memset(buff, 0, READ_BUFFER);
 
     PRInt32 read = PR_RecvFrom(socket,
                                buff,
