@@ -1,0 +1,78 @@
+<?xml version="1.0"?>
+<!--
+  Copyright (C) 2008 by Steve Krulewitz <skrulx@gmail.com>
+  Licensed under GPLv2 or later, see file LICENSE in the xpi for details.
+-->
+<?xml-stylesheet href="chrome://global/skin/" type="text/css"?>
+<?xml-stylesheet href="chrome://syrinxtape/content/prefs.css"?>
+<overlay
+  id="syrinxtape-network-overlay"
+  xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+>
+  <prefWindow id="BrowserPreferences">
+  <prefpane
+    id="network"
+    label="SyrinxTape"
+    onpaneload="PrefsController.init()"
+  >
+    <script
+      type="application/x-javascript"
+      src="chrome://syrinxtape/content/prefs.js"
+    />
+    <groupbox>
+      <caption label="Network Settings"/>
+      <hbox>
+        <label value="Local HTTP server port"/>
+        <textbox
+          id="internal-port"
+          type="number"
+          size="5"
+          onchange="PrefsController.savePrefs()"
+        />
+      </hbox>
+      <checkbox
+        id="gateway-enabled"
+        label="Automatically map external port"
+        oncommand="PrefsController.savePrefs()"
+      />
+      <hbox class="indent">
+        <label value="External HTTP server port"/>
+        <textbox
+          id="external-port"
+          type="number"
+          size="5"
+          onchange="PrefsController.savePrefs()"
+        />
+      </hbox>
+    </groupbox>
+    <groupbox>
+      <caption label="Network Status"/>
+      <hbox>
+        <label value="SyrinxTape service:"/>
+        <label id="status"/>
+      </hbox>
+      <box>
+        <button
+          label="Start"
+          id="start-service-button"
+          oncommand="PrefsController.start()"
+        />
+        <button
+          label="Stop"
+          id="stop-service-button"
+          oncommand="PrefsController.stop()"
+        />
+        <vbox style="-moz-box-pack: center">
+          <image id="throbber"/>
+        </vbox>
+        <spacer flex="1"/>
+        <button
+          label="Open debug window"
+          id="open-debug-window-button"
+          oncommand="PrefsController.openDebugWindow()"
+        />
+      </box>
+    </groupbox>
+  </prefpane>
+  </prefWindow>
+</overlay>
