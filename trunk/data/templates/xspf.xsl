@@ -7,6 +7,11 @@
   version="1.0"
 >
 <xsl:output method="xml"/>
+
+<xsl:template match="/root">
+  <xsl:apply-templates select="list" />
+</xsl:template>
+
 <xsl:template match="list">
 <playlist version="0" xmlns="http://xspf.org/ns/0/">
   <title>Syrinxtape: song count, runtine</title>

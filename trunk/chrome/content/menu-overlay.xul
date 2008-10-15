@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<!--
+  Copyright (C) 2008 by Steve Krulewitz <skrulx@gmail.com>
+  Licensed under GPLv2 or later, see file LICENSE in the xpi for details.
+-->
+<overlay
+  id="syrinxtape-menu-overlay"
+  xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+>
+  <menupopup id="menu_ToolsPopup">
+    <menuitem
+      id="syrinxtape-menuitem-preferences"
+      label="Syrinxtape Settings"
+      oncommand="SBOpenPreferences('syrinxtape-prefpane');"
+    />
+  </menupopup>
+</overlay>

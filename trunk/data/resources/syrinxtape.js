@@ -106,7 +106,7 @@ function setupTrackDisplay(id) {
 function togglePlayback(id) {
   id = id.replace(/song/,'');
   songClock = $E('#song'+currentTrack+' .clock');
-  //console.log("togglePlayback called with: " + id + " currentTrack is: " + currentTrack);
+  console.log("togglePlayback called with: " + id + " currentTrack is: " + currentTrack);
 
   if (id == currentTrack || id == null) {
     if(playerStatus == "PAUSED"|| playerStatus=="IDLE") {

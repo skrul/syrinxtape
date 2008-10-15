@@ -2,10 +2,6 @@
  * Copyright (C) 2008 by Steve Krulewitz <skrulx@gmail.com>
  * Licensed under GPLv2 or later, see file LICENSE in the xpi for details.
  */
-const Cc = Components.classes;
-const Ci = Components.interfaces;
-const Cr = Components.results;
-
 const STATUS_STRINGS = {
   0: "Stopped",
   1: "Starting",
@@ -18,8 +14,13 @@ function $(id) {
 }
 
 var PrefsController = {
+  _pref: Cc["@mozilla.org/preferences-service;1"]
+           .getService(Components.interfaces.nsIPrefService)
+           .getBranch("syrinxtape.appearence."),
+  _st: Cc["@skrul.com/syrinxtape/service;1"]
+         .getService(Ci.stISyrinxTapeService),
 
-  _updateUi: function PrefsController__updateUi() {
+  _updateUi: function _updateUi() {
     var config = this._st.getConfiguration();
     $("internal-port").value = config.internalPort;
     $("external-port").value = config.externalPort;
@@ -46,7 +47,7 @@ var PrefsController = {
     $("status").value = status;
   },
 
-  savePrefs: function PrefsController_savePrefs() {
+  _saveNetworkPrefs: function () {
     var config = {
       gatewayEnabled: $("gateway-enabled").checked,
       internalPort: $("internal-port").value,
@@ -56,26 +57,57 @@ var PrefsController = {
     this._updateUi();
   },
 
-  init: function PrefsController_init() {
-    this._st = Cc["@skrul.com/syrinxtape/service;1"]
-                 .getService(Ci.stISyrinxTapeService);
-    this._st.addStatusListener(this);
-    this._updateUi();
+  _saveAppearencePrefs: function () {
+    dump("---- _saveAppearencePrefs\n");
+    var values = stAppearenceController.get()
+    for (var name in values) {
+      this._pref.setCharPref(name, values[name]);
+    }
   },
 
-  unload: function PrefsController_unload() {
+  init: function () {
+
+    var that = this;
+    window.addEventListener("unload", function () {
+      that.unload();
+    }, false);
+
+    var appearence = {
+      title: "",
+      caption: "",
+      headercolor: "",
+      backgroundimage: "",
+      cssfile: ""
+    }
+    for (var name in appearence) {
+      appearence[name] = this._pref.getCharPref(name);
+    }
+
+    stAppearenceController.init(appearence);
+    this._st.addStatusListener(this);
+    this._updateUi();
+
+    $("syrinxtape-prefpane").addEventListener("change", function (e) {
+      that._saveNetworkPrefs();
+      that._saveAppearencePrefs();
+    }, true);
+
+  },
+
+  unload: function () {
     this._st.removeStatusListener(this);
   },
 
-  start: function PrefsController_start() {
+  start: function () {
+    this._saveNetworkPrefs();
     this._st.start();
   },
 
-  stop: function PrefsController_stop() {
+  stop: function () {
     this._st.stop();
   },
 
-  openDebugWindow: function PrefsController_openDebugWindow() {
+  openDebugWindow: function () {
     var wm = Cc["@mozilla.org/appshell/window-mediator;1"]
                .getService(Ci.nsIWindowMediator);
     var win = wm.getMostRecentWindow("SyrinxTape:Debug");
@@ -93,7 +125,7 @@ var PrefsController = {
                   null);
   },
 
-  onStatus: function PrefsController_onStatus(aStatus, aError) {
+  onStatus: function (aStatus, aError) {
     this._updateUi();
   },
 

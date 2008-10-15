@@ -12,13 +12,13 @@ Licensed under GPLv2 or later, see file LICENSE in the xpi for details.
     src="chrome://syrinxtape/content/overlay.js"
   />
   <page>
-    <hbox id="syrinxtape-box">
+    <hbox id="syrinxtape-box" align="center">
       <checkbox
         id="syrinxtape-publish"
         label="Publish this playlist"
         oncommand="SyrinxTapeController.publish(this.checked)"
       />
-      <hbox flex="1" id="syrinxtape-urlbox">
+      <hbox flex="1" id="syrinxtape-urlbox" align="center">
         <spacer flex="1"/>
         <label value="Views:" />
         <label id="syrinxtape-views"/>
