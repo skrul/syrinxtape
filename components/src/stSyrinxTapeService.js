@@ -11,7 +11,8 @@ const Cr = Components.results;
 const Cu = Components.utils;
 
 const SB_LIBRARY_MANAGER_READY_TOPIC = "songbird-library-manager-ready";
-const SB_LIBRARY_MANAGER_BEFORE_SHUTDOWN_TOPIC = "songbird-library-manager-before-shutdown";
+const SB_LIBRARY_MANAGER_BEFORE_SHUTDOWN_TOPIC =
+    "songbird-library-manager-before-shutdown";
 
 const ST_NS = "http://skrul.com/syrinxtape/1.0#";
 const SB_NS = "http://songbirdnest.com/data/1.0#";
@@ -21,13 +22,17 @@ const PROP_IS_PUBLISHED = ST_NS + "isPublished";
 const RE_EXTENSION = /.*\.(.*)$/;
 const RE_PLAYLIST_HTML = /^\/(.*)$/;
 const RE_TRACK = /^\/(.*)\/(.*)\/track.mp3$/;
+const RE_LIST_RESOURCE = /^\/(.*)\/__res__\/(.*)$/;
 const RE_RESOURCE = /^\/__res__\/(.*)$/;
 const RE_VIEW = /view=([^&]*)/;
 
 const CONTENT_TYPES = {
   css: "text/css",
   js: "application/x-javascript",
-  mp3: "audio/mpeg"
+  mp3: "audio/mpeg",
+  png: "image/png",
+  gif: "image/gif",
+  jpg: "image/jpeg"
 }
 
 const STATUS_STRINGS = {
@@ -50,6 +55,12 @@ function ST_GetDataDir() {
   file.append("data");
 
   return file;
+}
+
+function ST_NewUri(spec) {
+  var ios = Cc["@mozilla.org/network/io-service;1"]
+              .getService(Ci.nsIIOService);
+  return uri = ios.newURI(spec, null, null);
 }
 
 function stSyrinxTapeService() {
@@ -200,12 +211,59 @@ function stSyrinxTapeService__writeMediaList(aRequest, aResponse, aMediaList)
 {
   var path = "/" + encodeURIComponent(aMediaList.name);
 
-  var doc = this._newDocument("list");
+  var doc = this._newDocument("root");
 
-  var list = doc.documentElement;
-  list.setAttribute("guid", aMediaList.guid);
-  list.setAttribute("path", path);
-  list.setAttribute("count", aMediaList.length);
+  var totalDuration = 0;
+  for (var i = 0; i < aMediaList.length; i++) {
+    var item = aMediaList.getItemByIndex(i);
+    var duration = item.getProperty(SBProperties.duration);
+    if (duration) {
+      totalDuration += parseInt(duration);
+    }
+  }
+  var formattedDuration = this._formatPropertyValue(SBProperties.duration,
+                                                    totalDuration);
+
+  var appearence = {
+    title: "",
+    caption: "",
+    headercolor: "",
+    backgroundimage: "",
+    cssfile: ""
+  }
+  for (var name in appearence) {
+    appearence[name] = this._pref.getCharPref("appearence." + name);
+  }
+
+  if (appearence.backgroundimage) {
+    var pos = appearence.backgroundimage.lastIndexOf(".");
+    if (pos > 0) {
+      appearence.backgroundimage = path + "/__res__/backgroundimage" +
+                                   appearence.backgroundimage.substr(pos);
+    }
+    else {
+      appearence.backgroundimage = "";
+    }
+  }
+  if (appearence.cssfile) {
+    appearence.cssfile = path + "/__res__/cssfile.css";
+  }
+
+  var values = {
+    n: aMediaList.name,
+    c: aMediaList.length,
+    t: formattedDuration
+  };
+  appearence.title = this._expand(appearence.title, values);
+  appearence.caption = this._expand(appearence.caption, values);
+
+  this._appendAppearence(doc.documentElement, appearence);
+
+  var list = this._appendElement(doc.documentElement, null, "list", {
+    guid: aMediaList.guid,
+    path: encodeURIComponent(path),
+    count: aMediaList.length
+  });
 
   var props = aMediaList.getProperties();
   for (var i = 0; i < props.length; i++) {
@@ -219,13 +277,8 @@ function stSyrinxTapeService__writeMediaList(aRequest, aResponse, aMediaList)
 
   var items = this._appendElement(list, null, "items");
 
-  var totalTuration = 0;
   for (var i = 0; i < aMediaList.length; i++) {
     var item = aMediaList.getItemByIndex(i);
-    var duration = item.getProperty(SBProperties.duration);
-    if (duration) {
-      totalTuration += parseInt(duration);
-    }
 
     var url;
     if (!item.contentSrc.schemeIs("file")) {
@@ -251,8 +304,7 @@ function stSyrinxTapeService__writeMediaList(aRequest, aResponse, aMediaList)
     }
   }
 
-  list.setAttribute("duration",
-                    this._formatPropertyValue(SBProperties.duration, totalTuration));
+  list.setAttribute("duration", formattedDuration);
 
   var xsl;
   var contentType;
@@ -276,6 +328,45 @@ function stSyrinxTapeService__writeMediaList(aRequest, aResponse, aMediaList)
 
   this._writeXmlResponse(aRequest, aResponse, doc, xsl, contentType);
   return true;
+}
+
+stSyrinxTapeService.prototype._appendAppearence =
+function stSyrinxTapeService__appendAppearece(aNode, aValues)
+{
+  for (var name in aValues) {
+    if (name != "caption" && aValues[name]) {
+      this._appendElement(aNode, null, name, {
+        _text: aValues[name],
+      });
+    }
+  }
+
+  var caption = aValues["caption"];
+  if (!caption) {
+    return;
+  }
+
+  var parser = Cc["@mozilla.org/xmlextras/domparser;1"]
+                 .createInstance(Ci.nsIDOMParser);
+  var doc = parser.parseFromString(
+      "<root xmlns='http://www.w3.org/1999/xhtml'>" +
+      caption +
+      "</root>",
+      "text/xml");
+  var captionEl = this._appendElement(aNode, null, "caption");
+  var children = doc.documentElement.childNodes;
+  for (var i = 0; i < children.length; i++) {
+    captionEl.appendChild(children[i].cloneNode(true));
+  }
+}
+
+stSyrinxTapeService.prototype._expand =
+function stSyrinxTapeService__expand(aText, aValues)
+{
+  for (var key in aValues) {
+    aText = aText.replace("%" + key, aValues[key]);
+  }
+  return aText;
 }
 
 stSyrinxTapeService.prototype._writeTrack =
@@ -477,9 +568,7 @@ function stSyrinxTapeService__incrementProperty(aMediaItem, aProperty)
 stSyrinxTapeService.prototype._writeResponseFromURI =
 function stSyrinxTapeService__writeResponseFromURI(aRequest, aResponse, aURI)
 {
-  var ios = Cc["@mozilla.org/network/io-service;1"]
-              .getService(Ci.nsIIOService);
-  var channel = ios.newChannelFromURI(aURI);
+  var channel = this._ios.newChannelFromURI(aURI);
   var is = channel.open();
 
   aResponse.setStatusLine(aRequest.httpVersion, 200, "OK");
@@ -846,6 +935,27 @@ function stSyrinxTapeService_handle(aRequest, aResponse)
     else {
       this._write404(aRequest, aResponse, "Track not found");
     }
+    return;
+  }
+
+  a = RE_LIST_RESOURCE.exec(aRequest.path);
+  if (a) {
+    var path = decodeURIComponent(a[1]);
+    var resource = a[2].split(".")[0];
+    var list = this._getMediaListByPath(path);
+    if (resource == "backgroundimage" || resource == "cssfile") {
+      // TODO(skrul): Get info from list
+      var spec = this._pref.getCharPref("appearence." + resource);
+      if (spec) {
+        var file = Cc["@mozilla.org/file/local;1"]
+                     .createInstance(Ci.nsILocalFile);
+        file.initWithPath(spec);
+        var uri = this._ios.newFileURI(file);
+        this._writeResponseFromURI(aRequest, aResponse, uri);
+        return;
+      }
+    }
+    this._write404(aRequest, aResponse, "Resource not found");
     return;
   }
 

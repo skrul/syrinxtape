@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<!--
+Copyright (C) 2008 by Steve Krulewitz <skrulx@gmail.com>
+Licensed under GPLv2 or later, see file LICENSE in the xpi for details.
+-->
+<?xml-stylesheet href="chrome://syrinxtape/content/appearence-overlay.css"?>
+<overlay
+  xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+  id="syrinxtape-appearence-overlay"
+>
+  <script
+    type="application/x-javascript"
+    src="chrome://syrinxtape/content/appearence-overlay.js"
+  />
+
+  <vbox id="syrinxtape-appearence-tab">
+    <label value="Title:"/>
+    <textbox id="syrinxtape-title" multiline="true"/>
+    <label value="Caption: (xhtml allowed, must be valid)"/>
+    <textbox
+      id="syrinxtape-caption"
+      multiline="true"
+    />
+    <label id="syrinxtape-caption-error"/>
+    <hbox>
+      <label value="Header background color:"/>
+      <colorpicker
+        type="button"
+        id="syrinxtape-headercolor"
+        palettename="standard"
+      />
+    </hbox>
+    <label value="Background image:"/>
+    <hbox align="center">
+      <textbox flex="1" id="syrinxtape-backgroundimage"/>
+      <button label="Browse..." id="syrinxtape-backgroundimage-browse"/>
+    </hbox>
+    <label value="CSS file:"/>
+    <hbox align="center">
+      <textbox flex="1" id="syrinxtape-cssfile"/>
+      <button label="Browse..." id="syrinxtape-cssfile-browse"/>
+    </hbox>
+  </vbox>
+</overlay>

@@ -20,8 +20,14 @@
     <em:description>Share playlists with your friends</em:description>
     <em:creator>Steve Krulewitz</em:creator>
     <em:homepageURL>http://code.google.com/p/syrinxtape/</em:homepageURL>
-    <em:version>0.0.2</em:version>
-    <em:optionsURL>chrome://syrinxtape/content/prefs.xul</em:optionsURL>
+    <em:version>0.0.3</em:version>
+    <em:optionsURL>javascript:
+var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
+                   .getService(Components.interfaces.nsIWindowMediator);
+var w = wm.getMostRecentWindow("Browser:Preferences");
+var pane = w.document.getElementById('syrinxtape-prefpane');
+w.document.documentElement.showPane(pane);
+    </em:optionsURL>
 
   </Description>
 

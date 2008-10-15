@@ -3,4 +3,7 @@ syrinxtape.jar:
 % locale syrinxtape en-US %locales/en-US/
 % skin syrinxtape classic/1.0 %skin/
 % overlay windowtype:Songbird:MediaPage chrome://syrinxtape/content/overlay.xul
+% overlay windowtype:Songbird:Main chrome://syrinxtape/content/menu-overlay.xul
+% overlay chrome://browser/content/preferences/preferences.xul chrome://syrinxtape/content/preferences-overlay.xul
+% overlay chrome://syrinxtape/content/preferences-overlay.xul chrome://syrinxtape/content/appearence-overlay.xul
 @include_all_to

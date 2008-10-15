@@ -3,24 +3,36 @@
   xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
   xmlns:sb="http://songbirdnest.com/data/1.0#"
   xmlns:ot="http://skrul.com/syrinxtape/1.0#"
+  xmlns:xhtml="http://www.w3.org/1999/xhtml"
   xmlns="http://www.w3.org/1999/xhtml"
   version="1.0"
 >
 <xsl:output method="html"/>
 
+<xsl:template match="/root">
+  <xsl:apply-templates select="list"/>
+</xsl:template>
+
 <xsl:template match="list">
 <html xml:lang="en" lang="en">
 <head>
-<title><xsl:value-of select="sb:mediaListName"/></title>
+<title><xsl:value-of select="/root/title"/></title>
 <meta name="robots" content="noindex, nofollow" />
 
 <link rel="stylesheet" type="text/css" href="/__res__/tape.css" />
 
 <style type="text/css">
 div.banner {
-  background: #EC660F;
+  background: <xsl:value-of select="/root/headercolor"/>;
+<xsl:if test="/root/cssfile">
+  background-image: url(<xsl:value-of select="/root/backgroundimage"/>);
+</xsl:if>
 }
 </style>
+
+<xsl:if test="/root/cssfile">
+<link rel="stylesheet" type="text/css" href="{/root/cssfile}" />
+</xsl:if>
 
 <script type="text/javascript" src="/__res__/mootools.js"></script>
 <script type="text/javascript" src="/__res__/swfobject.js"></script>
@@ -51,13 +63,12 @@ if (!navigator.userAgent.match(/iPhone|iPod/i)) {
                      attributes);
 }
 
-var openPlaylist = [];
-openPlaylist.push(
-<xsl:for-each select="/list/items/item">
+var openPlaylist = [
+<xsl:for-each select="/root/list/items/item">
   <xsl:text>"</xsl:text><xsl:value-of select="@guid"/><xsl:text>"</xsl:text>
   <xsl:if test="position() != last()">,</xsl:if>
 </xsl:for-each>
-);
+];
 
 var listName = "<xsl:value-of select="sb:mediaListName"/>";
 
@@ -69,10 +80,10 @@ var listName = "<xsl:value-of select="sb:mediaListName"/>";
     <div class="banner">
       <div class="flag">
         <h1>
-          <xsl:value-of select="sb:mediaListName"/>
+          <xsl:value-of select="/root/title"/>
         </h1>
         <h2>
-          <xsl:value-of select="concat(@count, ' songs, ', @duration)"/>
+          <xsl:copy-of select="/root/caption/node()"/>
         </h2>
       </div>
     </div>

@@ -9,7 +9,7 @@ function runTest() {
                .getService(Ci.nsIWindowWatcher);
 
   ww.openWindow(null,
-                "chrome://syrinxtape/content/prefs.xul",
+                "chrome://browser/content/preferences/preferences.xul",
                 "_blank",
                 "chrome,all,dialog,modal,centerscreen",
                 null);
