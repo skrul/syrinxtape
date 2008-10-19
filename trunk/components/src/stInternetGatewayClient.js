@@ -171,12 +171,15 @@ function stInternetGatewayClient__updateDevice()
 
       // Try to get the URLBase.  If not present, use the host and port of the
       // gateway
-      var urlBaseSpec = xml.nsdevice::URLBase.text();
-      if (!urlBaseSpec) {
+      var urlBaseElement = xml.nsdevice::URLBase;
+      if (urlBaseElement) {
+        this._urlBase = this._ios.newURI(urlBaseElement.text(), null, null);
+      }
+      else {
         var gatewayUrl = this._ios.newURI(this._gateway, null, null);
         urlBaseSpec = "http://" + gatewayUrl.host + ":" + gatewayUrl.port;
+        this._urlBase = this._ios.newURI(urlBaseSpec, null, null);
       }
-      this._urlBase = this._ios.newURI(urlBaseSpec, null, null);
 
       // Get the wan service type
       var service = xml..nsdevice::service.(nsdevice::serviceType == URN_WANIP);
