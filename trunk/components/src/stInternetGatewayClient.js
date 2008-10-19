@@ -159,40 +159,53 @@ function stInternetGatewayClient__updateDevice()
   this._debugMessage("Updating gateway device");
 
   this._send(this._gateway, "GET", null, null, function (event, xml) {
-    if (!xml) {
-      this._refreshError(null,
-                         Ci.stIInternetGatewayClient.ERROR_NETWORK,
-                         "Bad XML from gateway");
-      return;
+    try {
+      if (!xml) {
+        this._refreshError(null,
+                           Ci.stIInternetGatewayClient.ERROR_NETWORK,
+                           "Bad XML from gateway");
+        return;
+      }
+
+      this._device = xml;
+
+      // Try to get the URLBase.  If not present, use the host and port of the
+      // gateway
+      var urlBaseSpec = xml.nsdevice::URLBase.text();
+      if (!urlBaseSpec) {
+        var gatewayUrl = this._ios.newURI(this._gateway, null, null);
+        urlBaseSpec = "http://" + gatewayUrl.host + ":" + gatewayUrl.port;
+      }
+      this._urlBase = this._ios.newURI(urlBaseSpec, null, null);
+
+      // Get the wan service type
+      var service = xml..nsdevice::service.(nsdevice::serviceType == URN_WANIP);
+      if (service == undefined) {
+        service = xml..nsdevice::service.(nsdevice::serviceType == URN_WANPPP)
+      }
+
+      if (service == undefined) {
+        this._refreshError(null,
+                           Ci.stIInternetGatewayClient.ERROR_NO_GATEWAY_FOUND,
+                           "No Internet Gatway Device found (no service)");
+        return;
+      }
+
+      this._serviceType = service.nsdevice::serviceType.text();
+      this._controlUrl = service.nsdevice::controlURL.text().substring(1);
+
+      if (xml..nsdevice::service.(nsdevice::serviceType == URN_WANIP)) {
+        this._serviceType = URN_WANIP;
+      }
+      else {
+        this._serviceType = URN_WANPPP;
+      }
+
+      this._updateLocalIpAddress();
     }
-
-    this._device = xml;
-    this._urlBase = this._ios.newURI(xml.nsdevice::URLBase.text(), null, null);
-
-    // Get the wan service type
-    var service = xml..nsdevice::service.(nsdevice::serviceType == URN_WANIP);
-    if (service == undefined) {
-      service = xml..nsdevice::service.(nsdevice::serviceType == URN_WANPPP)
+    catch (e) {
+      this._refreshError(e);
     }
-
-    if (service == undefined) {
-      this._refreshError(null,
-                         Ci.stIInternetGatewayClient.ERROR_NO_GATEWAY_FOUND,
-                         "No Internet Gatway Device found (no service)");
-      return;
-    }
-
-    this._serviceType = service.nsdevice::serviceType.text();
-    this._controlUrl = service.nsdevice::controlURL.text().substring(1);
-
-    if (xml..nsdevice::service.(nsdevice::serviceType == URN_WANIP)) {
-      this._serviceType = URN_WANIP;
-    }
-    else {
-      this._serviceType = URN_WANPPP;
-    }
-
-    this._updateLocalIpAddress();
   });
 }
 
