@@ -121,7 +121,7 @@ function stInternetGatewayClient__discover(aList)
       that._debugMessage("multicast response: " + BYTES_TO_STRING(receive));
       if (!this.gateway) {
         var message = BYTES_TO_STRING(receive);
-        var a = /^LOCATION: (.*)$/m.exec(message);
+        var a = /^location: (.*)$/mi.exec(message);
         if (a) {
           this.gateway = a[1];
         }
