@@ -172,7 +172,7 @@ function stInternetGatewayClient__updateDevice()
       // Try to get the URLBase.  If not present, use the host and port of the
       // gateway
       var urlBaseElement = xml.nsdevice::URLBase;
-      if (urlBaseElement) {
+      if (urlBaseElement.length() > 0) {
         this._urlBase = this._ios.newURI(urlBaseElement.text(), null, null);
       }
       else {
