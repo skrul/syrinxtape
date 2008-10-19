@@ -21,13 +21,7 @@
     <em:creator>Steve Krulewitz</em:creator>
     <em:homepageURL>http://code.google.com/p/syrinxtape/</em:homepageURL>
     <em:version>0.0.3</em:version>
-    <em:optionsURL>javascript:
-var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
-                   .getService(Components.interfaces.nsIWindowMediator);
-var w = wm.getMostRecentWindow("Browser:Preferences");
-var pane = w.document.getElementById('syrinxtape-prefpane');
-w.document.documentElement.showPane(pane);
-    </em:optionsURL>
+    <em:optionsURL>chrome://syrinxtape/content/open-preferences.xul</em:optionsURL>
 
   </Description>
 

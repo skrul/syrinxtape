@@ -4,7 +4,7 @@
   Licensed under GPLv2 or later, see file LICENSE in the xpi for details.
 -->
 <?xml-stylesheet href="chrome://global/skin/" type="text/css"?>
-<?xml-stylesheet href="chrome://syrinxtape/content/prefs.css"?>
+<?xml-stylesheet href="chrome://syrinxtape/content/preferences-overlay.css"?>
 <overlay
   id="syrinxtape-network-overlay"
   xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
@@ -17,7 +17,7 @@
   >
     <script
       type="application/x-javascript"
-      src="chrome://syrinxtape/content/prefs.js"
+      src="chrome://syrinxtape/content/preferences-overlay.js"
     />
     <tabbox flex="1">
       <tabs>
