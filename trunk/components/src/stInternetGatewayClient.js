@@ -103,10 +103,10 @@ function stInternetGatewayClient__discover(aList)
 
   var a = [
     "M-SEARCH * HTTP/1.1",
-    "HOST: " + UPNP_HOST + ":" + UPNP_PORT,
     "ST: " + device,
-    "MAN: \"ssdp:discover\"",
     "MX: 3",
+    "MAN: \"ssdp:discover\"",
+    "HOST: " + UPNP_HOST + ":" + UPNP_PORT,
     "",
     ""
   ];

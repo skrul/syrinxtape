@@ -155,6 +155,11 @@ stUdpMulticastWorker::Run()
   PRFileDesc* socket = PR_NewUDPSocket();
   ST_ENSURE_TRUE_DONE(socket, socket, NS_ERROR_OUT_OF_MEMORY);
 
+  PRSocketOptionData opt;
+  opt.option = PR_SockOpt_Reuseaddr;
+  opt.value.reuse_addr = PR_TRUE;
+  PR_SetSocketOption(socket, &opt);
+
   result = PR_Bind(socket, &readAddr);
   ST_ENSURE_TRUE_DONE(result == PR_SUCCESS, socket, NS_ERROR_FAILURE);
 
