@@ -20,7 +20,7 @@
     <em:description>Share playlists with your friends</em:description>
     <em:creator>Steve Krulewitz</em:creator>
     <em:homepageURL>http://code.google.com/p/syrinxtape/</em:homepageURL>
-    <em:version>0.0.3</em:version>
+    <em:version>0.0.4</em:version>
     <em:optionsURL>chrome://syrinxtape/content/open-preferences.xul</em:optionsURL>
 
   </Description>
