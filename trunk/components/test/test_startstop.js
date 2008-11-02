@@ -24,8 +24,8 @@ function runTest () {
       if (aStatus == Ci.stISyrinxTapeService.STATUS_READY) {
         timer = Cc["@mozilla.org/timer;1"].createInstance(Ci.nsITimer);
         timer.initWithCallback(function () {
-          log("stopping...");
-          st.stop();
+//          log("stopping...");
+//          st.stop();
         }, 5000, Ci.nsITimer.TYPE_ONE_SHOT);
       }
     },

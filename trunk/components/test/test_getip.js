@@ -13,7 +13,7 @@ function runTest () {
   var mainThread = tm.mainThread;
 
   var done = false;
-  nu.getLocalIpAddress("192.168.1.1", 80, 10000, function (aResult, aIpAddress) {
+  nu.getLocalIpAddress("", 0, 10000, function (aResult, aIpAddress) {
     log(aIpAddress);
     done = true;
   });
