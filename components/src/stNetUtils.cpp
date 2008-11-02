@@ -16,6 +16,9 @@
 #define UDP_TIMEOUT 400000
 #define READ_BUFFER 4096
 
+#define GUESS_REMOTE_IP_ADDRESS "128.0.0.1"
+#define GUESS_REMOTE_PORT 80
+
 NS_IMPL_ISUPPORTS1(stNetUtils, stINetUtils)
 
 stNetUtils::stNetUtils()
@@ -87,12 +90,23 @@ stNetUtils::GetLocalIpAddress(const nsACString& aRemoteIpAddress,
                               getter_AddRefs(proxiedCallback));
   NS_ENSURE_SUCCESS(rv, rv);
 
+  nsCString remoteIpAddress;
+  PRUint16 remotePort;
+  if (aRemoteIpAddress.IsEmpty()) {
+    remoteIpAddress.Assign(GUESS_REMOTE_IP_ADDRESS);
+    remotePort = GUESS_REMOTE_PORT;
+  }
+  else {
+    remoteIpAddress = aRemoteIpAddress;
+    remotePort = aRemotePort;
+  }
+
   nsRefPtr<stLocalIpAddressWorker> worker =
     new stLocalIpAddressWorker();
   NS_ENSURE_TRUE(worker, NS_ERROR_OUT_OF_MEMORY);
 
-  rv = worker->Init(aRemoteIpAddress,
-                    aRemotePort,
+  rv = worker->Init(remoteIpAddress,
+                    remotePort,
                     aTimeout,
                     proxiedCallback);
   NS_ENSURE_SUCCESS(rv, rv);
@@ -158,7 +172,8 @@ stUdpMulticastWorker::Run()
   PRSocketOptionData opt;
   opt.option = PR_SockOpt_Reuseaddr;
   opt.value.reuse_addr = PR_TRUE;
-  PR_SetSocketOption(socket, &opt);
+  result = PR_SetSocketOption(socket, &opt);
+  ST_ENSURE_TRUE_DONE(result == PR_SUCCESS, socket, NS_ERROR_FAILURE);
 
   result = PR_Bind(socket, &readAddr);
   ST_ENSURE_TRUE_DONE(result == PR_SUCCESS, socket, NS_ERROR_FAILURE);
